@@ -1,0 +1,26 @@
+# Microdados brutos: 1,9 GB. Nunca vao para o repositorio — o pipeline os le de
+# fora e grava o derivado em dados/processado, que e leve e versionado.
+dados/bruto/
+*.zip
+*.sav
+
+# Saidas grandes que sao regeneraveis
+*.html
+_cache_autocontido/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
+~$*

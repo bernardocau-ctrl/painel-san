@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: painel-san
+message: "Se este software for útil na sua pesquisa, cite-o como abaixo."
+type: software
+authors:
+  - family-names: "Caú"
+    given-names: "Bernardo Castanho Santos"
+    affiliation: "Programa de Pós-Graduação em Segurança Alimentar e Nutricional (PPGSAN), Universidade Federal do Estado do Rio de Janeiro (UNIRIO)"
+repository-code: "https://github.com/bernardocau-ctrl/painel-san"
+url: "https://bernardocau-ctrl.github.io/dashboardsan/"
+abstract: >-
+  Reprocessa as pesquisas domiciliares do IBGE (PNAD, PNAD Contínua e POF) em
+  indicadores comparáveis de segurança alimentar e nutricional, e os apresenta
+  num painel. Inclui classificação NOVA dos produtos da aquisição alimentar
+  domiciliar.
+keywords:
+  - segurança alimentar
+  - EBIA
+  - NOVA
+  - ultraprocessados
+  - POF
+  - PNAD
+  - Brasil
+license: MIT
+version: 0.1.0
+date-released: "2026-09-10"

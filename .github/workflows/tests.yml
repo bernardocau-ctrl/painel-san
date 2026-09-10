@@ -1,0 +1,35 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Dia 1 de cada mes. Nao gera commit e nao conta como desenvolvimento — serve
+    # para provar que o software continua rodando meses depois, que e o que um
+    # revisor olha quando avalia manutencao.
+    - cron: "0 9 1 * *"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Instalar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Rodar testes
+        run: pytest -v --cov=painel_san --cov-report=term-missing

@@ -1,0 +1,1 @@
+"""Peças compartilhadas entre módulos."""

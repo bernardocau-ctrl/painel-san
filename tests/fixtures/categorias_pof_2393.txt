@@ -1,0 +1,395 @@
+# Nomes de categoria da tabela 2393 do SIDRA (POF), extraidos em 10/09/2026.
+# Fixture dos testes: permite exercitar a classificacao sem os 1,9 GB de
+# microdados brutos, que nao vao para o repositorio.
+# 391 categorias, das quais 329 sao produtos folha (\d+.\d+.\d+).
+1. Cereais e leguminosas
+1.1 Cereais
+1.1.1 Arroz não especificado
+1.1.2 Arroz polido
+1.1.3 Milho em grão
+1.1.4 Milho verde em conserva
+1.1.5 Milho verde em espiga
+1.1.6 Outros
+1.2 Leguminosas
+1.2.1 Feijão-fradinho
+1.2.2 Feijão-jalo
+1.2.3 Feijão-manteiga
+1.2.4 Feijão-mulatinho
+1.2.5 Feijão-preto
+1.2.6 Feijão-rajado
+1.2.7 Feijão-roxo
+1.2.8 Outros feijões
+1.2.9 Outras
+2. Hortaliças
+2.1 Hortaliças folhosas e florais
+2.1.1 Acelga
+2.1.2 Agrião
+2.1.3 Alface
+2.1.4 Cheiro-verde
+2.1.5 Couve
+2.1.6 Couve-brócolis
+2.1.7 Couve-flor
+2.1.8 Repolho
+2.1.9 Outras
+2.2 Hortaliças frutosas
+2.2.1 Abóbora
+2.2.2 Abobrinha
+2.2.3 Azeitona em conserva
+2.2.4 Berinjela
+2.2.5 Cebola
+2.2.6 Chuchu
+2.2.7 Jiló
+2.2.8 Maxixe
+2.2.9 Pepino fresco
+2.2.10 Pimentão
+2.2.11 Quiabo
+2.2.12 Tomate
+2.2.13 Vagem
+2.2.14 Outras
+2.3 Hortaliças tuberosas e outras
+2.3.1 Alho
+2.3.2 Batata-aipo
+2.3.3 Batata-baroa
+2.3.4 Batata-doce
+2.3.5 Batata-inglesa
+2.3.6 Batata não especificada
+2.3.7 Beterraba
+2.3.8 Cará
+2.3.9 Cenoura
+2.3.10 Inhame
+2.3.11 Mandioca
+2.3.12 Outras
+3. Frutas
+3.1 Frutas de clima tropical
+3.1.1 Abacate
+3.1.2 Abacaxi
+3.1.3 Acerola
+3.1.4 Banana-d'água
+3.1.5 Banana-da-terra
+3.1.6 Banana-maçã
+3.1.7 Banana-ouro
+3.1.8 Banana-prata
+3.1.9 Outras bananas
+3.1.10 Goiaba
+3.1.11 Laranja-baía
+3.1.12 Laranja-lima
+3.1.13 Laranja-pêra
+3.1.14 Laranja-seleta
+3.1.15 Outras laranjas
+3.1.16 Limão comum
+3.1.17 Mamão
+3.1.18 Manga
+3.1.19 Maracujá
+3.1.20 Melancia
+3.1.21 Melão
+3.1.22 Tangerina
+3.1.23 Outras
+3.2 Frutas de clima temperado
+3.2.1 Ameixa
+3.2.2 Caqui
+3.2.3 Maçã
+3.2.4 Morango
+3.2.5 Pêra
+3.2.6 Pêssego
+3.2.7 Uva
+3.2.8 Outras
+4. Cocos, castanhas e nozes
+4.1 Cocos
+4.1.1 Açaí (emulsão)
+4.1.2 Coco-da-baía
+4.1.3 Outros
+4.2 Castanhas e nozes
+5. Farinhas, féculas e massas
+5.1 Farinhas
+5.1.1 Farinha de mandioca
+5.1.2 Farinha de rosca
+5.1.3 Farinha de trigo
+5.1.4 Farinha vitaminada
+5.1.5 Outras
+5.2 Féculas
+5.2.1 Amido de milho
+5.2.2 Creme de arroz
+5.2.3 Creme de milho
+5.2.4 Fécula de mandioca
+5.2.5 Flocos de aveia
+5.2.6 Flocos de milho
+5.2.7 Flocos de outros cereais
+5.2.8 Fubá de milho
+5.2.9 Outras
+5.3 Massas
+5.3.1 Macarrão com ovos
+5.3.2 Macarrão não especificado
+5.3.3 Macarrão sem ovos
+5.3.4 Massa de lasanha
+5.3.5 Massa de pastel
+5.3.6 Massa de pizza
+5.3.7 Outras
+6. Panificados
+6.1 Pães
+6.1.1 Pão caseiro
+6.1.2 Pão de forma de padaria
+6.1.3 Pão de forma industrializado
+6.1.4 Pão de milho
+6.1.5 Pão de queijo
+6.1.6 Pão doce
+6.1.7 Pão francês
+6.1.8 Pão integral
+6.1.9 Torrada
+6.1.10 Outros
+6.2 Bolos
+6.3 Biscoitos, roscas, etc.
+6.3.1 Biscoito doce
+6.3.2 Biscoito não especificado
+6.3.3 Biscoito salgado
+6.3.4 Rosca doce
+6.3.5 Rosca não especificada
+6.3.6 Rosca salgada
+6.3.7 Outros
+7. Carnes
+7.1 Carnes bovinas de primeira
+7.1.1 Alcatra
+7.1.2 Carne moída
+7.1.3 Carne não especificada
+7.1.4 Chã-de-dentro
+7.1.5 Contrafilé
+7.1.6 Filé mignon
+7.1.7 Lagarto comum
+7.1.8 Lagarto redondo
+7.1.9 Patinho
+7.2 Carnes bovinas de segunda
+7.2.1 Acém
+7.2.2 Capa de filé
+7.2.3 Carne moída
+7.2.4 Carne não especificada
+7.2.5 Costela
+7.2.6 Músculo
+7.2.7 Pá
+7.2.8 Peito
+7.2.9 Outras
+7.3 Carnes bovinas outras
+7.3.1 Carne de hambúrger
+7.3.2 Carne de sol
+7.3.3 Carne moída não especificada
+7.3.4 Carne não especificada
+7.3.5 Carne-seca
+7.3.6 Mocotó
+7.3.7 Outras
+7.4 Carnes suínas com osso e sem osso
+7.4.1 Carré
+7.4.2 Costela
+7.4.3 Lombo
+7.4.4 Pernil
+7.4.5 Porco eviscerado
+7.4.6 Outras
+7.5 Carnes suínas outras
+7.5.1 Cane salgada não especificada
+7.5.2 Costela de porco salgada
+7.5.3 Mortadela
+7.5.4 Paio
+7.5.5 Pé de porco salgado
+7.5.6 Presunto
+7.5.7 Salame
+7.5.8 Salsicha comum
+7.5.9 Toucinho fresco
+7.5.10 Toucinho defumado
+7.5.11 Outras
+7.6 Carnes de outros animais
+7.6.1 Carne de cabrito
+7.6.2 Carne de carneiro
+7.6.3 Linguiça
+7.6.4 Outras
+8. Vísceras
+8.1 Vísceras bovinas
+8.1.1 Bucho
+8.1.2 Fígado
+8.1.3 Língua
+8.1.4 Outras
+8.2 Vísceras suínas
+8.3 Outras vísceras
+9. Pescados
+9.1 Pescados de água salgada
+9.1.1 Anchova fresca
+9.1.2 Bacalhau
+9.1.3 Bagre fresco
+9.1.4 Cação fresco
+9.1.5 Camarão fresco
+9.1.6 Corvina fresca
+9.1.7 Meluza em filé congelado
+9.1.8 Merluza em filé fresco
+9.1.9 Parati fresco
+9.1.10 Pescada em filé congelado
+9.1.11 Pescada em filé fresco
+9.1.12 Pescada fresca
+9.1.13 Pescadinha fresca
+9.1.14 Sardinha em conserva
+9.1.15 Sardinha fresca
+9.1.16 Tainha fresca
+9.1.17 Outros pescados em filé congelado
+9.1.18 Outros pescados em filé fresco
+9.1.19 Outros pescados frescos
+9.1.20 Outros pescados salgados
+9.2 Pescados de água doce
+9.2.1 Acará fresca
+9.2.2 Acari fresco
+9.2.3 Anujá fresco
+9.2.4 Curimatã fresco
+9.2.5 Dourada fresca
+9.2.6 Jaraqui fresco
+9.2.7 Lambari fresco
+9.2.8 Mapará fresco
+9.2.9 Piau fresco
+9.2.10 Surubim fresco
+9.2.11 Tambaqui fresco
+9.2.12 Tilápia fresca
+9.2.13 Traíra fresca
+9.2.14 Tucunaré fresco
+9.2.15 Outros pescados em filé congelado
+9.2.16 Outros pescados em filé fresco
+9.2.17 Outros pescados frescos
+9.2.18 Outros pescados salgados
+9.3 Pescados não especificados
+9.3.1 Peixe em filé congelado
+9.3.2 Peixe em filé fresco
+9.3.3 Peixe fresco
+9.3.4 Peixe salgado
+10. Aves e ovos
+10.1 Aves
+10.1.1 Asa de frango
+10.1.2 Carne de frango não especificada
+10.1.3 Coxa de frango
+10.1.4 Dorso de frango
+10.1.5 Frango abatido (inteiro)
+10.1.6 Frango vivo
+10.1.7 Miúdos de frango
+10.1.8 Peito de frango
+10.1.9 Outras carnes de frango
+10.1.10 Pato inteiro ou em cortes
+10.1.11 Peru abatido
+10.1.12 Peru em cortes
+10.1.13 Outras
+10.2 Ovos
+10.2.1 Ovo de galinha
+10.2.2 Outros
+11. Laticínios
+11.1 Leite e creme de leite
+11.1.1 Creme de leite
+11.1.2 Leite condensado
+11.1.3 Leite de vaca fresco
+11.1.4 Leite de vaca pasteurizado
+11.1.5 Leite em pó desengordurado
+11.1.6 Leite em pó integral
+11.1.7 Leite em pó não especificado
+11.1.8 Outros
+11.2 Queijos e requeijão
+11.2.1 Queijo minas
+11.2.2 Queijo mozarela
+11.2.3 Queijo não especificado
+11.2.4 Queijo parmezão
+11.2.5 Queijo prato
+11.2.6 Outros queijos
+11.2.7 Requeijão
+11.3 Outros laticínios
+11.3.1 Iogurte
+11.3.2 Leite fermentado
+11.3.3 Manteiga
+11.3.4 Outros
+12. Açúcares, doces e produtos de confeitaria
+12.1 Açúcares
+12.1.1 Açúcar cristal
+12.1.2 Açúcar demerara
+12.1.3 Açúcar não especificado
+12.1.4 Açúcar refinado
+12.1.5 Outros
+12.2 Doces e produtos de confeitaria
+12.2.1 Bombom
+12.2.2 Chocolate em tablete
+12.2.3 Doce a base de leite
+12.2.4 Doce de fruta cristalizado
+12.2.5 Doce de fruta em calda
+12.2.6 Doce de fruta em pasta
+12.2.7 Rapadura
+12.2.8 Sorvete
+12.2.9 Outros
+12.3 Outros açúcares, doces e produtos de confeitaria
+12.3.1 Chocolate em pó
+12.3.2 Gelatina
+12.3.3 Mel de abelha
+12.3.4 Polpa de fruta
+12.3.5 Outros
+13. Sais e condimentos
+13.1 Sais
+13.1.1 Sal grosso
+13.1.2 Sal refinado
+13.1.3 Outros
+13.2 Condimentos
+13.2.1 Caldo de carne em tablete
+13.2.2 Caldo de galinha em tablete
+13.2.3 Outros caldos em tablete
+13.2.4 Colorau
+13.2.5 Fermento
+13.2.6 Leite de coco
+13.2.7 Maionese
+13.2.8 Massa de tomate
+13.2.9 Molho de tomate
+13.2.10 Tempero misto
+13.2.11 Vinagre de álcool
+13.2.12 Vinagre de vinho
+13.2.13 Vinagre não especificado
+13.2.14 Outros
+14. Óleos e gorduras
+14.1 Óleos
+14.1.1 Azeite de oliva
+14.1.2 Óleo de girassol
+14.1.3 Óleo de canola
+14.1.4 Óleo de milho
+14.1.5 Óleo de soja
+14.1.6 Óleo não especificado
+14.1.7 Outros
+14.2 Gorduras
+14.2.1 Banha de porco
+14.2.2 Margarina vegetal
+14.2.3 Outras
+15. Bebidas e infusões
+15.1 Bebidas alcoólicas
+15.1.1 Aguardente de cana
+15.1.2 Outras aguardentes
+15.1.3 Cerveja
+15.1.4 Vinho
+15.1.5 Outras
+15.2 Bebidas não alcoólicas
+15.2.1 Água mineral
+15.2.2 Refrigerante de cola
+15.2.3 Refrigerante de guaraná
+15.2.4 Refrigerante de laranja
+15.2.5 Refrigerante de limão
+15.2.6 Refrigerante de maçã
+15.2.7 Refrigerante de uva
+15.2.8 Bebida energética
+15.2.9 Refrigerante não especificado
+15.2.10 Outros refrigerantes
+15.2.11 Suco de fruta em pó
+15.2.12 Suco de fruta envasado
+15.2.13 Outras
+15.3 Cafés
+15.3.1 Café moído
+15.3.2 Café solúvel
+15.3.3 Outros
+15.4 Chás
+15.4.1 Chá-mate
+15.4.3 Outros
+16. Alimentos preparados e misturas industriais
+16.1 Alimentos preparados
+16.1.1 Alimento congelado
+16.1.2 Batata frita
+16.1.3 Carne assada
+16.1.4 Frango assado ou defumado
+16.1.5 Frango empanado
+16.1.6 Massa
+16.1.7 Refeição
+16.1.8 Salgadinho
+16.1.9 Sanduíche
+16.1.10 Outros
+16.2 Misturas industriais
+16.2.1 Mistura para bolo
+16.2.2 Outras
+17. Outros produtos

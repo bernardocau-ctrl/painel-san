@@ -1,0 +1,4 @@
+# Normaliza fim de linha: LF no repositorio, nativo na copia de trabalho.
+# Sem isso, um repo criado no Windows chega no CI do Linux com CRLF e o diff de
+# qualquer edicao vira o arquivo inteiro.
+* text=auto eol=lf
