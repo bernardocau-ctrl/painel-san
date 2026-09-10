@@ -93,11 +93,24 @@ def test_grupos_sao_validos(folhas):
 
 
 def test_modulo_e_puro():
-    """A camada de classificacao nao pode depender de UI nem de I/O. E o criterio
-    que o JOSS aplica a ferramentas web: modularidade e testabilidade."""
+    """A camada de classificacao nao pode depender de UI nem de I/O.
+
+    Rodado num processo LIMPO de proposito. Checar sys.modules dentro da suite nao
+    serve: o pytest ja importou pandas por causa de test_ingestao.py, e como os
+    arquivos rodam em ordem alfabetica o resultado dependeria de qual teste veio
+    antes. O subprocesso importa so o nova e mais nada."""
+    import subprocess
     import sys
-    assert "streamlit" not in sys.modules
-    assert "pandas" not in sys.modules
+    codigo = (
+        "import sys;"
+        "import painel_san.modulos.san.nova;"
+        "proibidos=[m for m in ('streamlit','pandas','numpy') if m in sys.modules];"
+        "print(proibidos);"
+        "sys.exit(1 if proibidos else 0)"
+    )
+    r = subprocess.run([sys.executable, "-c", codigo],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, "nova.py arrastou dependencia pesada: %s" % r.stdout.strip()
 
 
 # ── higiene das regras ───────────────────────────────────────────────────

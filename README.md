@@ -27,9 +27,10 @@ dado tabular leve, e o apresenta num painel.
 
 ## Estado
 
-**v0.1.0 — em construção.** Hoje o repositório traz a camada de classificação NOVA,
-testada e independente de interface. A camada de ingestão, a de visualização e o
-módulo de vigilância de agrotóxicos (PARA/ANVISA) entram nas próximas versões.
+**v0.1.0 — em construção.** O repositório traz hoje a classificação NOVA e a
+ingestão da aquisição alimentar domiciliar, ambas testadas e independentes de
+interface. A camada de visualização e o módulo de vigilância de alimentos
+contaminados por defensivos agrícolas (PARA/ANVISA) entram nas próximas versões.
 
 O painel publicado hoje é um HTML gerado por um fluxo anterior, que este pacote está
 substituindo.
@@ -59,6 +60,28 @@ nova.classificar_produto("1.1.2 Arroz polido")
 A classificação segue Monteiro et al. (2016) e usa densidades calóricas da TACO
 (NEPA-UNICAMP, 2011). O módulo é puro: não lê arquivo, não escreve arquivo e não
 importa Streamlit — é isso que o torna testável sem subir nenhuma interface.
+
+Os indicadores já processados estão em `dados/processado`, em Parquet:
+
+```python
+import pandas as pd
+
+br = pd.read_parquet("dados/processado/nova_brasil.parquet")
+br[br.nova_grupo == 4][["periodo", "pct_calorias"]]
+#   periodo  pct_calorias
+#      2002          10.7
+#      2008          13.1
+#      2018          15.2
+```
+
+Quatro arquivos, 30 KB no total: `nova_brasil`, `nova_regiao`, `nova_uf` e
+`nova_mapa` — este último é o mapeamento auditável produto a produto.
+
+Para reprocessar a partir da tabela bruta do SIDRA:
+
+```bash
+python -m painel_san.modulos.san.ingestao caminho/para/tabela_2393.csv
+```
 
 ## Testes
 
@@ -93,6 +116,15 @@ no repositório. Ficam em `dados/bruto/`, ignorado pelo git. O pipeline os lê d
 grava o derivado em `dados/processado/`, que é leve e versionado, para que qualquer
 pessoa reproduza as análises sem baixar nada do IBGE.
 
+A proporção é 1,9 GB de entrada para 30 KB de saída. É essa razão que torna a
+separação óbvia: reprocessar microdados a cada execução seria inviável no CI e
+desnecessário, porque o resultado é determinístico.
+
+O dado versionado tem testes de contrato próprios — 27 UFs, três períodos, os quatro
+grupos somando 100% em cada recorte, nenhum percentual fora de 0 a 100. Foi um
+invariante desse tipo que falhou silenciosamente quando 40 células do painel
+divergiram do SIDRA por convenção de arredondamento.
+
 ## Fontes
 
 PNAD 2004/2009/2013 · POF 2002-2003/2008-2009/2017-2018 · PNAD Contínua 2023/2024
@@ -100,10 +132,13 @@ PNAD 2004/2009/2013 · POF 2002-2003/2008-2009/2017-2018 · PNAD Contínua 2023/
 
 ## Como contribuir
 
-Ainda não há guia formal de contribuição — ele entra junto com a camada de ingestão.
-Por enquanto, abra uma issue descrevendo o que encontrou. Relatos de classificação
-NOVA divergente são especialmente bem-vindos: mande o nome da categoria da POF, o
-grupo que o pacote atribui e o grupo que você esperava, com a justificativa.
+Ainda não há `CONTRIBUTING.md` formal — entra na v0.2.0, junto com a camada de
+visualização. Por enquanto, abra uma issue descrevendo o que encontrou.
+
+Relatos de classificação NOVA divergente são especialmente bem-vindos, e há uma
+forma que ajuda muito: mande o nome exato da categoria da POF, o grupo que o pacote
+atribui, o grupo que você esperava e a justificativa. Com isso o caso vira uma linha
+em `CASOS_CONHECIDOS`, e a suíte passa a proteger contra ele para sempre.
 
 ## Licença
 
