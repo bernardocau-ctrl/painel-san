@@ -24,3 +24,9 @@ venv/
 .DS_Store
 Thumbs.db
 ~$*
+
+# Relatórios do PARA: documento público da Anvisa, 2,8 MB por ciclo.
+# Fica fora do repositório; o que se versiona é a tabela extraída em
+# dados/para_*.csv mais os totais de validação em para.py. Quem baixar da
+# Anvisa reproduz e confere — o programa recusa se divergir do gravado.
+*.pdf

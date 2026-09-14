@@ -69,6 +69,7 @@ class Temporal:
     ATRASADO = "atraso de disponibilidade"
     ATRASO_PROLONGADO = "indisponibilidade persistente"
     NADA_LOCALIZADO = "nada localizado"
+    NAO_APURADO = "não apurado por nós"
     AUSENCIA_PLANEJADA = "ausência planejada"
     SEM_CALENDARIO = "sem calendário"
 
@@ -133,6 +134,17 @@ class Observacao:
     unidade: Optional[str] = None
     planejada_para_depois: bool = False
 
+    # Não olhamos ainda. Distinto de "olhamos e não havia".
+    #
+    # Sem esta marca, o instrumento acusa o órgão pela nossa lista de tarefas. Um
+    # alimento medido no ciclo 2023, cujo relatório ainda não extraímos, apareceria
+    # como lacuna da Anvisa — e num painel de 36 células, doze acenderiam por
+    # trabalho nosso pendente. Quem lesse concluiria o contrário do verdadeiro.
+    #
+    # É a mesma disciplina da ausência planejada, virada para dentro: lá se evita
+    # cobrar do órgão o que o plano dele não previa; aqui, o que nós não fomos ver.
+    nao_apurado: bool = False
+
     @property
     def data_usavel(self) -> Tuple[Optional[date], str]:
         """A data que sustenta a classificação, e de que tipo ela é.
@@ -172,6 +184,8 @@ class Avaliacao:
 
         `PENDENTE` também não entra: venceu, mas dentro da tolerância declarada.
         É o estado que impede o painel de ficar vermelho no dia seguinte ao prazo.
+
+        `NAO_APURADO` também não: é pendência nossa, e sai em `pendencias_nossas`.
         """
         fora = []
         if self.temporal in (Temporal.ATRASADO, Temporal.ATRASO_PROLONGADO,
@@ -194,8 +208,20 @@ class Avaliacao:
         return (self.legibilidade,) if self.legibilidade == Legibilidade.ILEGIVEL else ()
 
     @property
+    def pendencias_nossas(self) -> Tuple[str, ...]:
+        """O que falta a NÓS, não ao órgão. Terceiro balde, e o mais desconfortável.
+
+        Um instrumento que mede a falta alheia precisa medir a própria com o mesmo
+        rigor, ou vira acusação de mão única. Isto sai em cor distinta, e o
+        resumo do painel deve mostrá-lo separado — não somado aos alertas."""
+        return (self.temporal,) if self.temporal == Temporal.NAO_APURADO else ()
+
+    @property
     def tem_alerta(self) -> bool:
-        """Alerta sobre este recorte. É o que decide a cor da célula."""
+        """Alerta sobre este recorte. É o que decide a cor da célula.
+
+        Pendência nossa NÃO entra: acender a célula por trabalho que falta a nós
+        seria atribuir ao órgão uma lacuna que é nossa."""
         return bool(self.alertas_da_unidade)
 
 
@@ -241,6 +267,12 @@ def _temporal(fonte: Fonte, obs: Observacao, hoje: date) -> Tuple[str, str, str]
     if not fonte.tem_calendario:
         return (Temporal.SEM_CALENDARIO, base,
                 "registro atualizado por ato normativo, sem calendário de medição")
+    if desde is None and obs.nao_apurado:
+        # Antes de NADA_LOCALIZADO de propósito: se ainda não fomos ver, não temos
+        # o que dizer sobre a fonte, e o silêncio é nosso.
+        return (Temporal.NAO_APURADO, base,
+                "pendência nossa: o ciclo em que esta unidade é medida ainda não "
+                "foi apurado por nós — nada aqui é afirmação sobre o órgão")
     if desde is None:
         return (Temporal.NADA_LOCALIZADO, base,
                 "nenhum resultado localizado no recurso consultado — o que não "
@@ -305,8 +337,9 @@ def _confianca(fonte: Fonte, temporal: str, base: str) -> str:
     catálogo, outro na observação — e o que faltava era só parar de exibir todas
     as cores do painel como igualmente sólidas.
     """
-    if temporal == Temporal.SEM_CALENDARIO:
-        # Não há classificação temporal a respeito da qual ter confiança.
+    if temporal in (Temporal.SEM_CALENDARIO, Temporal.NAO_APURADO):
+        # Não há classificação temporal a respeito da qual ter confiança — no
+        # segundo caso porque não se afirmou nada sobre o órgão.
         return Confianca.NAO_CLASSIFICAVEL
     if temporal == Temporal.NADA_LOCALIZADO:
         # Não se distingue "nunca mediram" de "mediram e não publicaram" de
