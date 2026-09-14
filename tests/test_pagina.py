@@ -30,7 +30,11 @@ def celulas():
 # ── a camada de desenho não contamina a lógica ───────────────────────────
 def test_o_modulo_nao_importa_streamlit_ao_ser_carregado():
     """Se importasse, a lógica só rodaria com a interface instalada — e o teste
-    da regra viraria teste de servidor. Streamlit nem está neste ambiente."""
+    da regra viraria teste de servidor.
+
+    Passou a valer de verdade em 14/09/2026, quando o Streamlit foi instalado
+    para rodar a página: antes, passava porque a biblioteca não existia no
+    ambiente. Agora prova o que se queria provar — que o import é tardio."""
     import subprocess, sys
     codigo = ("import sys;"
               "import painel_san.modulos.alimento_seguro.pagina;"
@@ -130,9 +134,23 @@ def test_o_cartao_diz_o_estado_a_confianca_e_o_motivo(celulas):
         assert pedaco in txt
 
 
+def test_a_linha_acionavel_e_curta_e_nao_repete_o_cartao(celulas):
+    """A primeira versão da página imprimia o `motivo` inteiro em cada item, e o
+    motivo traz a régua, a origem da régua e o desenho amostral. Três itens
+    viraram um parágrafo que citava a mesma passagem três vezes — e ninguém lê.
+
+    O detalhe não some: fica a um clique, que é onde serve."""
+    c = [x for x in celulas if x.unidade == "soja"][0]
+    linha = pagina.linha_acionavel(c)
+    assert len(linha) < 90, "a linha voltou a virar parágrafo: %r" % linha
+    assert "soja" in linha and "37% da meta" in linha
+    assert "Distribuição binomial" not in linha, "isso é do cartão, não da lista"
+
+
 def test_o_cartao_avisa_quando_a_regua_nao_foi_conferida():
     c = pagina.Celula(unidade="x", balde=pagina.Balde.LACUNA, estado="atrasado",
-                      confianca="baixa", cobertura_da_meta=None, motivo="m",
+                      amostral="não avaliável", confianca="baixa",
+                      cobertura_da_meta=None, motivo="m",
                       regua="r", regua_verificada=False)
     assert "não conferida" in pagina.texto_do_cartao(c)
 

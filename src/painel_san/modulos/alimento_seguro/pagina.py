@@ -102,7 +102,8 @@ class Celula:
     """
     unidade: str
     balde: str
-    estado: str
+    estado: str          # temporal
+    amostral: str        # independente do temporal, e é o que pega o PARA
     confianca: str
     cobertura_da_meta: Optional[float]
     motivo: str
@@ -173,6 +174,7 @@ def montar(avaliacoes: Sequence[lat.Avaliacao],
     return tuple(Celula(unidade=av.unidade or fonte.id,
                         balde=balde_de(av),
                         estado=av.temporal,
+                        amostral=av.amostral,
                         confianca=av.confianca,
                         cobertura_da_meta=av.cobertura_da_meta,
                         motivo=av.motivo,
@@ -219,6 +221,25 @@ def grade(celulas: Sequence[Celula],
     for i, c in enumerate(sorted(celulas, key=lambda x: x.unidade)):
         fora.append((c, i % colunas, i // colunas))
     return tuple(fora)
+
+
+def linha_acionavel(c: Celula) -> str:
+    """Uma linha para a lista de "onde gastar o próximo pedido de informação".
+
+    Existe porque a primeira versão da página imprimia o `motivo` inteiro em cada
+    item, e o motivo é escrito para o cartão de evidência: traz a régua, a origem
+    da régua e o desenho amostral. Três itens assim viraram um parágrafo de
+    quinhentas palavras que repetia a mesma citação três vezes — e ninguém lê.
+
+    O detalhe não some: vai para trás de um clique, que é onde ele serve.
+
+    Mostra a dimensão AMOSTRAL, não a temporal. Na primeira versão saía "soja —
+    37% da meta · no prazo", o que é verdade nas duas metades e contraditório
+    lido junto: o item está na lista por causa da amostra, e o estado exibido
+    falava de prazo. As dimensões serem independentes é o desenho do módulo — mas
+    misturá-las numa frase só transfere o trabalho de separar para o leitor.
+    """
+    return "**%s** — %s · %s" % (c.unidade, c.rotulo_cobertura, c.amostral)
 
 
 def texto_do_cartao(c: Celula) -> str:
@@ -310,7 +331,12 @@ def app(caminho_csv: str = "dados/para_2024.csv", ciclo: int = 2024,
 
     st.subheader("Onde vale gastar o próximo pedido de informação")
     for c in r.acionaveis:
-        st.markdown("**%s** — %s. %s" % (c.unidade, c.rotulo_cobertura, c.motivo))
+        st.markdown(linha_acionavel(c))
+        with st.expander("por que esta célula tem esta cor"):
+            st.markdown(c.motivo)
+            st.caption("régua: %s" % c.regua)
+            if not c.regua_verificada:
+                st.caption("régua ainda não conferida no documento primário")
 
     st.subheader("O que esta fonte NÃO permite concluir")
     st.markdown(
@@ -322,5 +348,7 @@ def app(caminho_csv: str = "dados/para_2024.csv", ciclo: int = 2024,
         "- qualquer recorte por estado ou município: a fonte não desagrega")
 
     if r.reguas_por_verificar:
+        # Crases porque o Markdown come o sublinhado: "mapa_pncrc" saía como
+        # "mapa pncrc", e um identificador exibido errado é pior que não exibido.
         st.info("Réguas ainda não conferidas no documento primário: %s."
-                % ", ".join(r.reguas_por_verificar))
+                % ", ".join("`%s`" % i for i in r.reguas_por_verificar))
