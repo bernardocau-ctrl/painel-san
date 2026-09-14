@@ -87,9 +87,9 @@ def test_o_modulo_nunca_afirma_que_o_orgao_nao_mediu():
 
 # ── tolerância em dias, declarada por fonte ──────────────────────────────
 def test_tolerancia_evita_alarme_no_dia_seguinte():
-    """Fonte semestral que publica com duas semanas de folga está publicando, não
+    """Fonte anual que publica com seis semanas de folga está publicando, não
     atrasada. Sem tolerância, tudo fica vermelho e o alerta perde sentido."""
-    obs = Observacao(data_publicacao=date(2026, 3, 1))       # ~6,5 meses
+    obs = Observacao(data_publicacao=date(2025, 8, 1))       # ~13,5 meses
     av = latencia.avaliar(fontes.IBAMA_COMERCIALIZACAO, obs, HOJE)
     assert av.temporal == Temporal.PENDENTE
     assert not av.tem_alerta, "pendente dentro da tolerância não pinta a célula"
@@ -308,7 +308,7 @@ def test_regua_nao_verificada_esta_sinalizada():
     """Parte do catálogo ainda não teve a régua conferida no documento primário.
     O teste não reprova por isso — registra quais faltam, para não esquecermos."""
     pendentes = [f.id for f in fontes.CATALOGO if not f.regua_verificada]
-    assert set(pendentes) == {"ibama_comercializacao", "mapa_pncrc"}, (
+    assert set(pendentes) == {"mapa_pncrc"}, (
         "mudou a lista de réguas por verificar: %s" % pendentes)
 
 
@@ -351,15 +351,46 @@ def test_o_pncrc_separa_promessa_de_medir_de_promessa_de_publicar():
     assert "publicar" in f.regua_fonte.lower()
 
 
-def test_a_contradicao_da_regua_do_ibama_esta_registrada():
-    """A página do IBAMA diz semestral; há indício de que o decreto virou anual em
-    2021. Não se alcançou o consolidado. Mantemos o que o órgão declara de si —
-    e registramos que, se a mudança se confirmar, o achado passa a ser sobre a
-    página do IBAMA estar citando regra superada."""
+def test_o_ibama_e_anual_desde_2021_e_nao_semestral():
+    """Lido no art. 41 consolidado em 14/09/2026.
+
+    O Decreto 10.833/2021 trocou 'até 31 de janeiro e 31 de julho' por
+    'anualmente, até 31 de janeiro' — afrouxamento de semestral para anual. O
+    catálogo dizia seis meses, seguindo a página do IBAMA, e estava errado.
+
+    Segunda cicatriz do mesmo tipo da do SISAGUA: as duas réguas que vinham de
+    página institucional ou de reportagem estavam erradas, e as duas erravam para
+    o lado de cobrar mais do que a norma exige."""
     f = fontes.IBAMA_COMERCIALIZACAO
-    assert f.periodicidade_meses == 6
-    assert "10.833" in f.regua_fonte or "10.833" in f.observacao
-    assert not f.regua_verificada
+    assert f.periodicidade_meses == 12
+    assert f.regua_verificada
+    assert "10.833" in f.regua_fonte
+
+
+def test_o_ibama_publica_menos_granular_do_que_o_decreto_manda_coletar():
+    """O achado mais limpo do catálogo, porque não depende de juízo nosso.
+
+    O § 2º do art. 41 exige quantitativos MENSAIS das empresas. O CSV publicado
+    traz colunas SEMESTRE e ANO. O dado nasce mensal e chega ao público agregado
+    por semestre — perda de granularidade entre o que o governo recebe e o que
+    publica, medida contra a régua do próprio órgão."""
+    f = fontes.IBAMA_COMERCIALIZACAO
+    assert "MENSAIS" in f.regua_fonte, "a exigência mensal precisa estar na régua"
+    assert f.desagrega_por("semestre"), "é o que o CSV de fato entrega"
+    assert not f.desagrega_por("mes"), (
+        "se um dia o IBAMA publicar o mês, este teste falha — e falhar aqui é a "
+        "notícia: a lacuna que o instrumento aponta terá sido fechada")
+
+
+def test_a_pagina_do_ibama_contradiz_o_decreto_e_isso_fica_registrado():
+    """A fonte contradiz a si mesma: o site anuncia 'Relatório Semestral' com
+    prazos de 31/01 e 31/07, que é a redação anterior. Quem confia no site cobra
+    prazo inexistente; quem confia no decreto não acha isso dito no site.
+
+    Foi previsto antes de saber a resposta, e é o tipo de falha que o instrumento
+    existe para tornar visível."""
+    o = fontes.IBAMA_COMERCIALIZACAO.observacao
+    assert "página" in o.lower() and "anterior" in o.lower()
 
 
 def test_o_catalogo_registra_que_trimestre_significa_deteccao():

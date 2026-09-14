@@ -137,34 +137,39 @@ IBAMA_COMERCIALIZACAO = Fonte(
          "AGROTOXICOS/RelatoriosdeComercializacaodeAgrotoxicos/"
          "relatorios_comercializacao_agrotoxicos.csv"),
     formato=Formato.CSV,
-    periodicidade_meses=6,
-    regua_fonte=("Art. 41 do Decreto 4.074/2002: empresas entregam dados 'até 31 de "
-                 "janeiro e 31 de julho de cada ano', conforme o Anexo VII. É a régua "
-                 "que o próprio IBAMA publica hoje na página do Relatório Semestral. "
-                 "RESSALVA: há indício de que o Decreto 10.833/2021 mudou esse artigo "
-                 "para anual — ver observação."),
-    regua_verificada=False,   # ver observação: tentativa de 14/09/2026 não concluiu
-    tolerancia_dias=60,
-    regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis: consolidar "
-                      "declaração de empresa leva tempo, e o CSV é cumulativo."),
+    periodicidade_meses=12,
+    regua_fonte=("Art. 41 do Decreto 4.074/2002, na redação dada pelo Decreto "
+                 "10.833/2021: as empresas titulares de registro fornecem aos órgãos "
+                 "federais competentes 'anualmente, até 31 de janeiro de cada ano'. "
+                 "O § 2º exige que apresentem os quantitativos MENSAIS, conforme o "
+                 "Relatório do Anexo VII."),
+    regua_verificada=True,    # art. 41 consolidado, lido em 14/09/2026
+    tolerancia_dias=90,
+    regua_tolerancia=("Escolha nossa. Um trimestre sobre um ciclo anual: as empresas "
+                      "entregam até 31 de janeiro, e consolidar centenas de "
+                      "declarações num CSV cumulativo leva tempo."),
     granularidade=("uf", "semestre", "ingrediente_ativo", "classe_de_uso"),
     observacao=(
-        "RÉGUA EM DISPUTA — tentativa de verificação em 14/09/2026, não concluída.\n\n"
-        "Duas versões do art. 41 do Decreto 4.074/2002 circulam:\n"
-        "  · a página do próprio IBAMA, hoje, diz semestral, 31/01 e 31/07, "
-        "citando o art. 41 e o Anexo VII;\n"
-        "  · fontes secundárias afirmam que o Decreto 10.833/2021 alterou esse "
-        "artigo para ANUAL, até 31 de janeiro.\n\n"
-        "O texto consolidado no Planalto recusou conexão em três tentativas, e a "
-        "cópia do decreto que o MAPA publica é anterior a 2021 (tem dezesseis "
-        "anotações de redação, nenhuma daquele ano). A Câmara devolveu 429.\n\n"
-        "Mantemos SEIS MESES porque a régua emprestada é a que o órgão declara de "
-        "si hoje, e o IBAMA declara semestral na sua própria página. Se a alteração "
-        "de 2021 se confirmar, o achado não é que erramos — é que o IBAMA está "
-        "publicando como vigente uma regra superada, o que é, ele próprio, uma "
-        "falha de legibilidade da fonte.\n\n"
-        "Para fechar: art. 41 do Decreto 4.074/2002 na redação consolidada, e o art. "
-        "correspondente do Decreto 10.833/2021.\n\n"
+        "TRÊS CAMADAS QUE NÃO COINCIDEM — apuradas em 14/09/2026.\n\n"
+        "  entrega   ANUAL, até 31 de janeiro  (art. 41, caput, red. Dec. 10.833/2021)\n"
+        "  coleta    MENSAL                    (art. 41, § 2º, mesma redação)\n"
+        "  publicado SEMESTRAL                 (colunas SEMESTRE e ANO do CSV)\n\n"
+        "O dado nasce mensal por exigência do próprio decreto e chega ao público "
+        "agregado por semestre. Não é lacuna de medição: é perda de granularidade "
+        "entre o que o governo recebe e o que publica — falha distinta, com remédio "
+        "distinto, e sustentada pela régua do próprio órgão. É o achado mais limpo "
+        "do catálogo, porque não depende de nenhum juízo nosso.\n\n"
+        "ACHADO SOBRE A PRÓPRIA PÁGINA. O IBAMA anuncia hoje um 'Relatório "
+        "Semestral', com prazos de 31/01 e 31/07 — que é a redação ANTERIOR do art. "
+        "41. O decreto de 2021 afrouxou para anual e a página não acompanhou. Um "
+        "usuário que confie no site cobra prazo que não existe mais; um que confie "
+        "no decreto não encontra isso dito em lugar nenhum do site. A fonte "
+        "contradiz a si mesma, e isso é objeto do instrumento, não ruído.\n\n"
+        "O § 1º acrescenta que os órgãos federais de saúde e de agricultura têm "
+        "acesso aos dados entregues ao órgão ambiental — ou seja, o dado mensal "
+        "circula dentro do governo enquanto o público recebe semestre.\n\n"
+        "Mudou também o obrigado: antes 'importadoras, exportadoras, produtoras e "
+        "formuladoras'; agora 'titulares de registro', que é conjunto mais estreito.\n\n"
         "Venda por UF é onde o produto foi COMERCIALIZADO, não onde foi aplicado nem "
         "onde o alimento foi consumido. Distribuidoras concentram venda em alguns "
         "estados."),
@@ -230,10 +235,10 @@ MS_SISAGUA_AGROTOXICOS = Fonte(
                  "cada ponto de captação, incluindo os parâmetros de agrotóxicos."),
     regua_verificada=True,    # lido no Anexo XX, tabela do Anexo 13 e notas (8) e (9)
     tolerancia_dias=60,
-    regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis, a mesma do "
-                      "IBAMA por ter a mesma periodicidade — e aqui a coleta é "
+    regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis: a coleta é "
                       "municipal e descentralizada, com digitação posterior no "
-                      "sistema nacional."),
+                      "sistema nacional. É o prazo mais curto do catálogo, e por "
+                      "isso a maior tolerância proporcional."),
     granularidade=("municipio", "parametro", "semestre"),
     observacao=(
         "CORREÇÃO DE 14/09/2026. O catálogo dizia 'trimestral obrigatório, Portaria "
