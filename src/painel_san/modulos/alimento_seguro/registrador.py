@@ -57,8 +57,18 @@ AGENTE = ("painel-san/0.1 (observatorio de disponibilidade de dados de vigilanci
           "https://github.com/bernardocau-ctrl/painel-san)")
 
 TIMEOUT = 30
+
+# `etag` entrou depois da primeira rodada. É o único identificador de versão que
+# alguns servidores oferecem e o `last-modified` não cobre: o IBAMA republica o
+# CSV cumulativo sem mexer na data declarada, e nesse caso a troca do etag é a
+# ÚNICA pista de que o arquivo mudou. Custa zero — vem no mesmo cabeçalho que já
+# se lê — e sem ele a série registraria "nada mudou" numa rodada em que mudou.
+#
+# Acrescentar coluna a um arquivo append-only exige reescrever o cabeçalho e
+# completar as linhas antigas com campo vazio. Feito uma vez, em 14/09/2026,
+# preservando as cinco observações do ponto zero.
 COLUNAS = ("carimbo", "fonte_id", "url", "metodo", "http_status", "content_type",
-           "content_length", "last_modified", "erro")
+           "content_length", "last_modified", "etag", "erro")
 
 
 @dataclass(frozen=True)
@@ -72,6 +82,7 @@ class Registro:
     content_type: str
     content_length: Optional[int]
     last_modified: str
+    etag: str
     erro: str
 
     @property
@@ -125,6 +136,7 @@ def observar(fonte: Fonte, agora: Optional[datetime] = None,
         content_type=(cab.get("content-type") or "").split(";")[0].strip(),
         content_length=int(tamanho) if tamanho and tamanho.isdigit() else None,
         last_modified=cab.get("last-modified", ""),
+        etag=cab.get("etag", "").strip('"'),
         erro=erro,
     )
 

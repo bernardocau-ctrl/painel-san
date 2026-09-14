@@ -25,7 +25,7 @@ def registro(**kw):
     base = dict(carimbo=AGORA.isoformat(timespec="seconds"),
                 fonte_id="anvisa_para", url="http://exemplo", metodo="HEAD",
                 http_status=200, content_type="application/pdf",
-                content_length=853188, last_modified="", erro="")
+                content_length=853188, last_modified="", etag="", erro="")
     base.update(kw)
     return reg.Registro(**base)
 
@@ -130,9 +130,57 @@ def test_none_vira_campo_vazio_e_nao_a_palavra_none(tmp_path):
     assert "None" not in corpo
 
 
+# ── etag ─────────────────────────────────────────────────────────────────
+def test_etag_e_lido_e_vem_sem_aspas():
+    """Servidores devolvem o etag entre aspas, às vezes com prefixo W/. Guardar
+    com as aspas faria a mesma versão parecer duas ao comparar entre rodadas."""
+    class FalsaResposta:
+        status = 200
+        headers = {"Content-Type": "text/csv", "Content-Length": "10",
+                   "ETag": '"0x8DD1234ABCD"'}
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+    import urllib.request
+    original = urllib.request.urlopen
+    urllib.request.urlopen = lambda *a, **k: FalsaResposta()
+    try:
+        r = reg.observar(cat.IBAMA_COMERCIALIZACAO, AGORA)
+    finally:
+        urllib.request.urlopen = original
+    assert r.etag == "0x8DD1234ABCD"
+
+
+def test_etag_ausente_vira_string_vazia_e_nao_quebra():
+    """Nem todo servidor oferece. Ausência é o caso comum, não erro."""
+    assert registro().etag == ""
+
+
+def test_etag_vai_para_o_csv(tmp_path):
+    alvo = str(tmp_path / "registro.csv")
+    reg.acrescentar([registro(etag="abc123")], alvo)
+    texto = io.open(alvo, encoding="utf-8").read()
+    assert "etag" in texto.splitlines()[0]
+    assert "abc123" in texto
+
+
 # ── higiene ──────────────────────────────────────────────────────────────
 def test_colunas_batem_com_o_dataclass():
     assert set(reg.COLUNAS) == set(reg.Registro.__dataclass_fields__)
+
+
+def test_o_registro_do_ponto_zero_tem_a_coluna_nova():
+    """A coluna `etag` entrou depois da primeira rodada. O arquivo é append-only,
+    então foi preciso reescrever cabeçalho e completar as linhas antigas com campo
+    vazio — preservando as cinco observações de 14/09/2026. Este teste garante que
+    a migração não deixou o arquivo incoerente com o código."""
+    import csv, os
+    alvo = os.path.join(os.path.dirname(__file__), "..", "dados", "registro_fontes.csv")
+    if not os.path.exists(alvo):
+        pytest.skip("registro ainda não existe neste checkout")
+    linhas = list(csv.DictReader(io.open(alvo, encoding="utf-8")))
+    assert linhas, "o ponto zero da série não pode ter sido perdido"
+    for linha in linhas:
+        assert set(linha) == set(reg.COLUNAS)
 
 
 def test_todo_formato_do_catalogo_tem_content_type_esperado():

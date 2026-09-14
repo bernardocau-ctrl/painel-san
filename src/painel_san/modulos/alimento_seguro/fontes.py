@@ -20,7 +20,7 @@ ESTE ARQUIVO É A CONTRIBUIÇÃO, NÃO A INFRAESTRUTURA
 SOBRE AS DIMENSÕES SEREM INDEPENDENTES
     Uma fonte pode estar em dia e ainda assim ser inútil. O PARA do ciclo 2024 é
     atual e ilegível por máquina ao mesmo tempo, e em seis dos catorze alimentos
-    ficou abaixo do mínimo amostral que a própria Anvisa calculou. Três falhas
+    ficou abaixo da meta amostral que a própria Anvisa declarou. Três falhas
     distintas, com remédios distintos.
 
     Por isso o catálogo não tem um campo "situação". Quem avalia é `latencia.py`,
@@ -68,6 +68,20 @@ class Fonte:
     regua_fonte: str
     regua_verificada: bool = False
 
+    # Quantos dias de atraso toleramos antes de chamar de atraso.
+    #
+    # Era uma constante única de 15% do prazo, e estava invertida: 15% de 36
+    # meses dá cinco meses e meio de perdão ao PARA, enquanto 15% de 3 meses dá
+    # catorze dias ao SISAGUA. A fonte mais lenta ganhava doze vezes mais folga
+    # absoluta que a mais rápida — o contrário do que se queria.
+    #
+    # ATENÇÃO: diferente de todo o resto deste arquivo, este número é NOSSO, não
+    # do órgão. Nenhum deles declara tolerância. Por isso `regua_tolerancia` diz
+    # explicitamente que a escolha é nossa e por quê: quem discordar precisa
+    # poder discordar do número certo, e não do instrumento inteiro.
+    tolerancia_dias: Optional[int] = None
+    regua_tolerancia: str = ""
+
     # A URL acima devolve o DADO, ou só a página onde ele mora?
     #
     # Descoberto na primeira rodada do registrador, em 14/09/2026: três das cinco
@@ -86,9 +100,19 @@ class Fonte:
     # não é lacuna de medição: é limite de granularidade, que é outra falha.
     granularidade: Tuple[str, ...] = ()
 
-    # Mínimo amostral que o próprio órgão define, quando define.
-    minimo_amostral: Optional[int] = None
-    regua_minimo: Optional[str] = None
+    # META amostral que o próprio órgão declarou para o ciclo, quando declarou.
+    #
+    # Chamava-se `minimo_amostral`, e a palavra carregava uma conclusão que não
+    # nos cabe. As 231 amostras do PARA são a meta que a Anvisa calculou para
+    # aquele desenho e aquele ciclo — não um limiar universal de
+    # representatividade. Uma coisa é dizer "ficou em 37% da meta declarada,
+    # calculada assim, nesta página"; outra é dizer "a amostra é insuficiente",
+    # que é afirmação estatística sobre o país e exigiria conhecer população-alvo,
+    # desenho probabilístico, perdas e desfecho.
+    #
+    # A primeira é verificável. A segunda é nossa opinião com cara de número.
+    meta_amostral: Optional[int] = None
+    regua_meta: Optional[str] = None
 
     observacao: str = ""
 
@@ -116,6 +140,9 @@ IBAMA_COMERCIALIZACAO = Fonte(
     periodicidade_meses=6,
     regua_fonte="Relatório Semestral de Agrotóxicos, publicação declarada pelo IBAMA",
     regua_verificada=False,   # a página fala em relatório semestral; falta conferir o ato
+    tolerancia_dias=60,
+    regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis: consolidar "
+                      "declaração de empresa leva tempo, e o CSV é cumulativo."),
     granularidade=("uf", "semestre", "ingrediente_ativo", "classe_de_uso"),
     observacao=("Venda por UF é onde o produto foi COMERCIALIZADO, não onde foi "
                 "aplicado nem onde o alimento foi consumido. Distribuidoras "
@@ -147,10 +174,19 @@ ANVISA_PARA = Fonte(
     periodicidade_meses=36,
     regua_fonte="Plano Plurianual 2023-2025 do PARA, Tabela 1",
     regua_verificada=True,    # lido no relatório do ciclo 2024, p. 29
+    tolerancia_dias=180,
+    regua_tolerancia=("Escolha nossa. Seis meses sobre um ciclo de trinta e seis: o "
+                      "relatório de um ciclo sai bem depois do fim das coletas, e "
+                      "cobrar no dia seguinte ao fechamento seria cobrar o "
+                      "impossível. É a maior tolerância do catálogo — e é de fato um "
+                      "pouco mais frouxa que os 15% antigos (164 dias). A correção "
+                      "não foi apertar o PARA: foi parar de dar ao SISAGUA catorze "
+                      "dias só porque o prazo dele é curto."),
     granularidade=("alimento", "ciclo"),
-    minimo_amostral=231,
-    regua_minimo=("Distribuição binomial, 1% de incidência esperada acima do LOQ, "
-                  "IC de 90% — relatório PARA ciclo 2024, p. 30"),
+    meta_amostral=231,
+    regua_meta=("Distribuição binomial, 1% de incidência esperada acima do LOQ, "
+                "IC de 90% — relatório PARA ciclo 2024, p. 30. Meta por alimento "
+                "por ciclo, no desenho daquele ciclo."),
     observacao=("Nem o arquivo que a Anvisa chama de 'Dados Brutos' é planilha: "
                 "responde com content-type application/pdf. Os relatórios recentes "
                 "não desagregam por UF."),
@@ -164,8 +200,17 @@ MS_SISAGUA_AGROTOXICOS = Fonte(
     formato=Formato.CSV,
     endpoint_estavel=False,
     periodicidade_meses=3,
-    regua_fonte="Portaria GM/MS nº 888/2021 — monitoramento trimestral obrigatório",
+    regua_fonte=("Portaria GM/MS nº 888/2021 — frequência trimestral para o parâmetro "
+                 "agrotóxicos. ATENÇÃO: a portaria condiciona a frequência ao "
+                 "parâmetro, ao tipo de manancial e ao resultado anterior; não é "
+                 "'trimestral para tudo'. Enquanto o artigo não for lido no primário, "
+                 "o trimestre aqui é a leitura mais exigente possível da norma, e "
+                 "não deve sustentar afirmação pública sozinho."),
     regua_verificada=False,   # a periodicidade consta em reportagem; falta ler a portaria
+    tolerancia_dias=30,
+    regua_tolerancia=("Escolha nossa. Um mês sobre um trimestre. Pela régua "
+                      "percentual antiga eram catorze dias — dura demais para um "
+                      "sistema de digitação municipal descentralizada."),
     granularidade=("municipio", "parametro", "trimestre"),
     observacao=("O registro do parâmetro agrotóxico parou em janeiro de 2023, por "
                 "falha técnica do sistema. É a régua mais dura do catálogo, e a "
@@ -183,6 +228,9 @@ MAPA_PNCRC = Fonte(
     periodicidade_meses=12,
     regua_fonte="Planos anuais de amostragem declarados pelo MAPA",
     regua_verificada=False,   # falta ler o manual instrutivo do PNCRC
+    tolerancia_dias=90,
+    regua_tolerancia=("Escolha nossa. Um trimestre sobre um plano anual, pela mesma "
+                      "razão do PARA: o relatório de um ano não sai em janeiro."),
     granularidade=("cadeia_produtiva", "ano"),
     observacao=("Cobre produtos de origem animal — carne, leite, ovos, mel — onde o "
                 "PARA cobre vegetal. Dois ministérios, dois desenhos, o mesmo "

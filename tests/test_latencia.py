@@ -14,7 +14,7 @@ import pytest
 from painel_san.modulos.alimento_seguro import fontes, latencia
 from painel_san.modulos.alimento_seguro.fontes import Formato
 from painel_san.modulos.alimento_seguro.latencia import (
-    Amostral, Granularidade, Legibilidade, Observacao, Temporal)
+    Amostral, Base, Confianca, Granularidade, Legibilidade, Observacao, Temporal)
 
 HOJE = date(2026, 9, 14)
 
@@ -26,9 +26,9 @@ def test_em_dia_da_um():
     assert 0.98 < lat < 1.02
 
 
-def test_nunca_medido_e_infinito():
-    """Infinito, não um número grande. Não há o que ordenar entre duas fontes que
-    nunca mediram."""
+def test_sem_data_e_infinito():
+    """Infinito, não um número grande. Não há o que ordenar entre duas fontes das
+    quais nada se localizou."""
     assert latencia.latencia_relativa(None, 12, HOJE) == float("inf")
 
 
@@ -42,12 +42,94 @@ def test_periodicidade_invalida_levanta():
         latencia.latencia_relativa(date(2026, 1, 1), 0, HOJE)
 
 
-def test_folga_evita_alarme_no_dia_seguinte():
+# ── medir não é publicar ─────────────────────────────────────────────────
+def test_publicacao_tem_precedencia_sobre_referencia():
+    """De fora do órgão só a publicação é verificável. Quando as duas existem, é
+    a publicação que sustenta a classificação — e a avaliação registra isso."""
+    obs = Observacao(data_referencia=date(2024, 12, 31),
+                     data_publicacao=date(2025, 11, 30))
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert av.base_temporal == Base.PUBLICACAO
+    assert "2025-11-30" in av.motivo
+
+
+def test_so_referencia_enfraquece_a_afirmacao():
+    """Com apenas a data de referência, o instrumento não sabe se o resultado
+    chegou a ser publicado — e o texto precisa dizer isso, não escondê-lo."""
+    obs = Observacao(data_referencia=date(2024, 12, 31))
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert av.base_temporal == Base.REFERENCIA
+    assert "publicação desconhecida" in av.motivo
+
+
+def test_as_duas_datas_produzem_latencias_diferentes():
+    """É o caso que motivou a separação: o dado é de 2022, mas só apareceu em
+    2025. Confundir as duas responde a pergunta errada."""
+    obs = Observacao(data_referencia=date(2022, 12, 31),
+                     data_publicacao=date(2025, 6, 30))
+    lat_ref = latencia.latencia_relativa(obs.data_referencia, 36, HOJE)
+    lat_pub = latencia.latencia_relativa(obs.data_publicacao, 36, HOJE)
+    assert lat_ref > lat_pub
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert av.latencia_relativa == pytest.approx(lat_pub)
+
+
+def test_o_modulo_nunca_afirma_que_o_orgao_nao_mediu():
+    """Regra de redação, com teste, porque é a afirmação que derruba o
+    instrumento. Nada localizado é sobre o recurso consultado, não sobre o país."""
+    obs = Observacao(unidade="acai")
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert av.temporal == Temporal.NADA_LOCALIZADO
+    assert "não permite concluir" in av.motivo
+    for proibida in ("deixou de monitorar", "não mediu", "não existe", "nunca medido"):
+        assert proibida not in av.motivo
+
+
+# ── tolerância em dias, declarada por fonte ──────────────────────────────
+def test_tolerancia_evita_alarme_no_dia_seguinte():
     """Fonte semestral que publica com duas semanas de folga está publicando, não
     atrasada. Sem tolerância, tudo fica vermelho e o alerta perde sentido."""
-    obs = Observacao(ultima_medicao=date(2026, 3, 1))       # ~6,5 meses
+    obs = Observacao(data_publicacao=date(2026, 3, 1))       # ~6,5 meses
     av = latencia.avaliar(fontes.IBAMA_COMERCIALIZACAO, obs, HOJE)
-    assert av.temporal == Temporal.NO_PRAZO
+    assert av.temporal == Temporal.PENDENTE
+    assert not av.tem_alerta, "pendente dentro da tolerância não pinta a célula"
+
+
+def test_a_regua_percentual_antiga_punia_o_prazo_curto():
+    """O defeito que motivou a troca, travado como teste.
+
+    Com 15% do prazo, o PARA ganhava ~164 dias de perdão e o SISAGUA ~14: quanto
+    mais longo o compromisso, maior a folga absoluta. Agora cada fonte declara a
+    sua, e a do SISAGUA é o dobro do que a régua antiga lhe dava."""
+    assert fontes.MS_SISAGUA_AGROTOXICOS.tolerancia_dias == 30
+    antiga = 0.15 * fontes.MS_SISAGUA_AGROTOXICOS.periodicidade_meses * 30.44
+    assert antiga < 15
+    assert fontes.MS_SISAGUA_AGROTOXICOS.tolerancia_dias > antiga
+
+
+def test_atraso_prolongado_se_distingue_de_atraso():
+    """Um ciclo perdido e catorze ciclos perdidos não podem ter a mesma cor."""
+    um_pouco = Observacao(data_publicacao=date(2026, 3, 1))   # ~1,1 trimestre além
+    muito = Observacao(data_publicacao=date(2022, 12, 31))    # ~14 trimestres além
+    a = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, um_pouco, HOJE)
+    b = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, muito, HOJE)
+    assert a.temporal == Temporal.ATRASADO
+    assert b.temporal == Temporal.ATRASO_PROLONGADO
+    assert b.latencia_relativa > a.latencia_relativa
+    assert a.tem_alerta and b.tem_alerta, "os dois alertam; o que muda é a gravidade"
+
+
+def test_toda_fonte_com_calendario_declara_tolerancia_e_justificativa():
+    """Impede que alguém acrescente fonte com tolerância inventada e muda — este
+    é o único número do catálogo que é NOSSO, e por isso precisa de defesa
+    escrita ao lado."""
+    for f in fontes.CATALOGO:
+        if not f.tem_calendario:
+            continue
+        assert f.tolerancia_dias, "%s sem tolerância declarada" % f.id
+        assert f.regua_tolerancia.strip(), "%s sem justificativa" % f.id
+        assert "nossa" in f.regua_tolerancia.lower(), (
+            "%s precisa dizer que a tolerância é escolha nossa, não do órgão" % f.id)
 
 
 # ── o caso que mais importa acertar ──────────────────────────────────────
@@ -87,7 +169,7 @@ def test_fora_do_cronograma_nao_vira_ausencia_planejada():
 def test_para_esta_em_dia_e_ainda_assim_ilegivel():
     """O ciclo 2024 é atual. E é PDF. Duas dimensões, dois remédios: publicar em
     CSV não torna a medição mais frequente, nem vice-versa."""
-    obs = Observacao(ultima_medicao=date(2025, 12, 1), unidade="pepino")
+    obs = Observacao(data_publicacao=date(2025, 12, 1), unidade="pepino")
     av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
     assert av.temporal == Temporal.NO_PRAZO
     assert av.legibilidade == Legibilidade.ILEGIVEL
@@ -97,52 +179,98 @@ def test_para_esta_em_dia_e_ainda_assim_ilegivel():
         "célula, os catorze alimentos ficariam vermelhos e o mapa perderia o que varia")
 
 
-def test_soja_abaixo_do_minimo_da_propria_anvisa():
+# ── cobertura da meta, não "insuficiente" ────────────────────────────────
+def test_soja_fica_abaixo_da_meta_da_propria_anvisa():
     """85 amostras contra as 231 que a Anvisa calcula por distribuição binomial.
-    A régua é dela, não nossa."""
-    obs = Observacao(ultima_medicao=date(2025, 12, 1), n_amostras=85, unidade="soja")
+    A régua é dela, não nossa — e o que se afirma é cobertura da meta, não
+    insuficiência estatística, que seria conclusão nossa."""
+    obs = Observacao(data_publicacao=date(2025, 12, 1), n_amostras=85, unidade="soja")
     av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
-    assert av.amostral == Amostral.INSUFICIENTE
-    assert "231" in av.motivo and "85" in av.motivo
+    assert av.amostral == Amostral.ABAIXO_DA_META
+    assert av.cobertura_da_meta == pytest.approx(85 / 231)
+    assert "231" in av.motivo and "85" in av.motivo, "o denominador fica à vista"
+    assert "37%" in av.motivo
 
 
-def test_laranja_atinge_o_minimo():
-    obs = Observacao(ultima_medicao=date(2025, 12, 1), n_amostras=240, unidade="laranja")
+def test_a_palavra_insuficiente_nao_aparece_em_lugar_nenhum():
+    """Trava de redação. "Insuficiente" é afirmação sobre representatividade no
+    país; exigiria população-alvo, desenho probabilístico, perdas e desfecho —
+    nada disso publicado, nada disso recalculado por nós."""
+    obs = Observacao(data_publicacao=date(2025, 12, 1), n_amostras=85, unidade="soja")
     av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
-    assert av.amostral == Amostral.SUFICIENTE
+    assert "insuficiente" not in av.motivo.lower()
+    assert "insuficiente" not in av.amostral.lower()
 
 
-def test_sem_minimo_declarado_nao_avalia_amostra():
-    """Não inventamos mínimo para quem não declarou um."""
-    obs = Observacao(ultima_medicao=date(2026, 3, 1), n_amostras=3)
+def test_laranja_atinge_a_meta():
+    obs = Observacao(data_publicacao=date(2025, 12, 1), n_amostras=240, unidade="laranja")
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert av.amostral == Amostral.ATINGE_A_META
+    assert av.cobertura_da_meta > 1.0
+
+
+def test_sem_meta_declarada_nao_avalia_amostra():
+    """Não inventamos meta para quem não declarou uma."""
+    obs = Observacao(data_publicacao=date(2026, 3, 1), n_amostras=3)
     av = latencia.avaliar(fontes.IBAMA_COMERCIALIZACAO, obs, HOJE)
     assert av.amostral == Amostral.NAO_AVALIAVEL
+    assert av.cobertura_da_meta is None
 
 
+# ── granularidade ────────────────────────────────────────────────────────
 def test_granularidade_ausente_nao_e_ausencia_de_dado():
     """O PARA recente não desagrega por UF. O dado existe — só não nesse nível.
     É falha de granularidade, com outro remédio."""
-    obs = Observacao(ultima_medicao=date(2025, 12, 1))
+    obs = Observacao(data_publicacao=date(2025, 12, 1))
     av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE, eixo_pedido="uf")
     assert av.granularidade == Granularidade.NAO_DESAGREGAVEL
     assert av.temporal == Temporal.NO_PRAZO, "continua em dia; o que falta é o recorte"
 
 
 def test_ibama_desagrega_por_uf():
-    obs = Observacao(ultima_medicao=date(2026, 3, 1))
+    obs = Observacao(data_publicacao=date(2026, 3, 1))
     av = latencia.avaliar(fontes.IBAMA_COMERCIALIZACAO, obs, HOJE, eixo_pedido="uf")
     assert av.granularidade == Granularidade.DISPONIVEL
 
 
-# ── a fonte mais atrasada do catálogo ────────────────────────────────────
-def test_sisagua_agrotoxicos_parado_desde_2023():
-    """Portaria 888/2021 obriga medição trimestral. O registro parou em janeiro de
-    2023. É a régua mais dura e o maior descumprimento."""
-    obs = Observacao(ultima_medicao=date(2022, 12, 31))
+# ── grau de confiança ────────────────────────────────────────────────────
+def test_regua_lida_no_primario_mais_publicacao_observada_da_confianca_alta():
+    """O PARA é a única fonte do catálogo com régua conferida no documento."""
+    obs = Observacao(data_publicacao=date(2025, 12, 1))
+    av = latencia.avaliar(fontes.ANVISA_PARA, obs, HOJE)
+    assert fontes.ANVISA_PARA.regua_verificada
+    assert av.confianca == Confianca.ALTA
+
+
+def test_regua_de_reportagem_sobre_data_inferida_da_confianca_baixa():
+    """O pior caso do catálogo, e é justamente o SISAGUA — a fonte sobre a qual
+    mais se quer falar. O painel precisa mostrar que essa cor pesa menos."""
+    obs = Observacao(data_referencia=date(2022, 12, 31))
     av = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, obs, HOJE)
-    assert av.temporal == Temporal.ATRASADO
-    assert av.latencia_relativa > 14, "mais de 14 trimestres sem medir"
-    assert "888" in av.motivo, "o motivo precisa citar a régua e sua origem"
+    assert not fontes.MS_SISAGUA_AGROTOXICOS.regua_verificada
+    assert av.base_temporal == Base.REFERENCIA
+    assert av.confianca == Confianca.BAIXA
+
+
+def test_um_ingrediente_bom_de_dois_da_moderada():
+    obs = Observacao(data_publicacao=date(2022, 12, 31))
+    av = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, obs, HOJE)
+    assert av.confianca == Confianca.MODERADA
+
+
+def test_sem_calendario_nao_tem_confianca_a_declarar():
+    """Não há classificação temporal, logo não há o que graduar."""
+    obs = Observacao(data_publicacao=date(2026, 9, 11))
+    av = latencia.avaliar(fontes.ANVISA_MONOGRAFIAS, obs, HOJE)
+    assert av.temporal == Temporal.SEM_CALENDARIO
+    assert av.confianca == Confianca.NAO_CLASSIFICAVEL
+
+
+def test_nada_localizado_tem_confianca_baixa():
+    """Porque não se distingue "nunca mediram" de "mediram e não publicaram" de
+    "publicaram onde não olhamos"."""
+    av = latencia.avaliar(fontes.ANVISA_PARA, Observacao(), HOJE)
+    assert av.confianca == Confianca.BAIXA
 
 
 # ── higiene do catálogo ──────────────────────────────────────────────────
@@ -156,8 +284,8 @@ def test_toda_fonte_declara_a_origem_da_regua():
     para impedir que alguém acrescente uma fonte com periodicidade inventada."""
     for f in fontes.CATALOGO:
         assert f.regua_fonte.strip(), "%s sem regua_fonte" % f.id
-        if f.minimo_amostral is not None:
-            assert f.regua_minimo, "%s declara mínimo sem dizer de onde vem" % f.id
+        if f.meta_amostral is not None:
+            assert f.regua_meta, "%s declara meta sem dizer de onde vem" % f.id
 
 
 def test_regua_nao_verificada_esta_sinalizada():
@@ -167,6 +295,16 @@ def test_regua_nao_verificada_esta_sinalizada():
     assert set(pendentes) == {"ibama_comercializacao", "ms_sisagua_agrotoxicos",
                               "mapa_pncrc"}, (
         "mudou a lista de réguas por verificar: %s" % pendentes)
+
+
+def test_a_regua_do_sisagua_registra_que_a_frequencia_e_condicional():
+    """A Portaria 888/2021 condiciona a frequência ao parâmetro, ao manancial e ao
+    resultado anterior. Enquanto o artigo não for lido no primário, o catálogo
+    precisa carregar a ressalva junto da régua — senão o instrumento afirma mais
+    do que sabe sobre a fonte que ele mais quer cobrar."""
+    r = fontes.MS_SISAGUA_AGROTOXICOS.regua_fonte
+    assert "condiciona" in r
+    assert not fontes.MS_SISAGUA_AGROTOXICOS.regua_verificada
 
 
 def test_formato_legivel_e_coerente():
