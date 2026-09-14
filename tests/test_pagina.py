@@ -24,7 +24,7 @@ CSV = os.path.join(os.path.dirname(__file__), "..", "dados", "para_2024.csv")
 
 @pytest.fixture(scope="module")
 def celulas():
-    return pagina.montar(para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE))
+    return pagina.montar(para.avaliar_plano(para.ler_csv(CSV), HOJE))
 
 
 # ── a camada de desenho não contamina a lógica ───────────────────────────
@@ -78,16 +78,35 @@ def test_os_quatro_baldes_cobrem_o_ciclo_sem_sobrar(celulas):
 
 
 def test_o_resumo_nao_soma_os_baldes(celulas):
-    """Somar lacuna com pendência nossa daria um número maior e uma afirmação
-    falsa — metade da falta seria nossa, apresentada como do órgão."""
+    """Somar os baldes daria um número maior e uma afirmação falsa: com só o
+    ciclo 2024 ingerido, 28 das 36 células estariam "com problema" — e doze
+    delas são a nossa lista de tarefas, não falha da Anvisa."""
     r = pagina.resumo(celulas, HOJE)
+    assert r.contagem[pagina.Balde.SEM_RESULTADO] == 10
     assert r.contagem[pagina.Balde.LACUNA] == 6
     assert r.contagem[pagina.Balde.NOSSA] == 12
-    assert r.contagem[pagina.Balde.PLANEJADA] == 10
+    assert r.contagem[pagina.Balde.PLANEJADA] == 0
     assert r.contagem[pagina.Balde.EM_DIA] == 8
     assert r.total == 36
     f = r.frase()
-    assert "6 de 36" in f and "12 ainda não apuradas por nós" in f
+    assert "10 de 36 unidades sem nenhum resultado público" in f
+    assert "12 ainda não apuradas por nós" in f
+
+
+def test_ingerir_o_segundo_ciclo_zera_a_divida_nossa(celulas):
+    """O balde que mede a nós mesmos precisa poder chegar a zero — senão é
+    decoração. Com 2023 e 2024 ingeridos ele zera, e as nove lacunas que sobram
+    são todas da fonte."""
+    import glob
+    res = tuple(r for c in sorted(glob.glob(os.path.join(
+        os.path.dirname(__file__), "..", "dados", "para_*.csv"))) 
+        for r in para.ler_csv(c))
+    dois = pagina.montar(para.avaliar_plano(res, HOJE))
+    r = pagina.resumo(dois, HOJE)
+    assert r.contagem[pagina.Balde.NOSSA] == 0
+    assert r.contagem[pagina.Balde.LACUNA] == 9
+    assert r.contagem[pagina.Balde.SEM_RESULTADO] == 10, (
+        "os dez do ciclo 2025 não mudam: nenhum relatório saiu")
 
 
 # ── o que a interface mostra primeiro ────────────────────────────────────
@@ -230,17 +249,21 @@ def test_todo_balde_tem_contorno_proprio():
 
 # ── a figura ─────────────────────────────────────────────────────────────
 def test_a_figura_tem_uma_serie_por_balde_presente(celulas):
+    """Uma série por balde COM células. Ausência planejada some da legenda em
+    2026 porque nenhum ciclo do plano 2023-2025 está mais por vir — e uma legenda
+    que anuncia categoria vazia confunde."""
     fig = pagina.figura(celulas)
     nomes = [t.name for t in fig.data]
-    assert len(nomes) == 4
-    for balde in pagina.Balde.ORDEM:
+    presentes = {c.balde for c in celulas}
+    assert len(nomes) == len(presentes)
+    for balde in presentes:
         assert any(n.startswith(balde) for n in nomes)
 
 
 def test_a_legenda_traz_a_contagem(celulas):
     """A leitura começa pelo agregado; um mapa inteiro em alerta é ignorado."""
     fig = pagina.figura(celulas)
-    assert any("(6)" in t.name for t in fig.data), "seis lacunas da fonte"
+    assert any("(10)" in t.name for t in fig.data), "dez sem resultado público"
     assert any("(12)" in t.name for t in fig.data), "doze pendências nossas"
 
 

@@ -242,30 +242,36 @@ def distinguiveis(a: Resultado, b: Resultado, z: float = 1.6449) -> bool:
 
 
 # ─────────────────────────── ponte com a avaliação ───────────────────────────
-def observacoes(resultados: Sequence[Resultado], ciclo: int,
-                cronograma: Dict[str, tuple] = None) -> Sequence[lat.Observacao]:
+def observacoes(resultados: Sequence[Resultado], hoje: date,
+                cronograma: Dict[str, tuple] = None,
+                ciclos_publicados: Sequence[int] = None) -> Sequence[lat.Observacao]:
     """Uma observação por alimento do PLANO — não por alimento medido.
 
     A diferença é o módulo inteiro. Percorrer só os catorze medidos produziria um
     painel que mostra o que existe; percorrer os trinta e seis do plano produz um
     painel que mostra o que falta, que é o objeto.
 
-    QUATRO desfechos saem daqui, e distingui-los é o ponto:
+    CINCO desfechos saem daqui, e distingui-los é o trabalho todo:
 
-        medido no ciclo      → tem data e n, avalia cobertura da meta
-        marcado para depois  → ausência planejada, não é lacuna
-        ciclo não ingerido   → pendência NOSSA. O alimento é medido num ciclo
-                               anterior cujo relatório ainda não extraímos. Não
-                               alerta contra a Anvisa, porque não sabemos nada
-                               sobre ele — só sabemos que não fomos ver.
-        ingerido e ausente   → aí sim é achado: lemos o relatório do ciclo em que
-                               ele deveria estar, e ele não estava.
+        medido                 → tem data e n, avalia cobertura da meta
+        só tem ciclo futuro    → ausência planejada, não é lacuna
+        ingerido e ausente     → lemos o relatório do ciclo em que ele deveria
+                                 estar e ele não estava; aí sim é achado
+        publicado e não lido   → pendência NOSSA. O relatório existe, nós é que
+                                 não o apuramos. Não alerta contra a Anvisa.
+        encerrado sem publicar → a janela fechou e nenhum relatório saiu. Achado
+                                 da fonte, mas NÃO atraso: ver `latencia`.
 
-    A terceira linha foi acrescentada depois de ver o resultado real: com apenas o
-    ciclo 2024 extraído, doze dos trinta e seis alimentos acendiam como lacuna da
-    Anvisa quando a lacuna era a nossa lista de tarefas. Um painel assim diria o
-    contrário do verdadeiro — e seria derrubado por quem tivesse lido o relatório
-    de 2023.
+    A quarta linha nasceu de ver o resultado real — com só o ciclo 2024 extraído,
+    doze alimentos acendiam como lacuna da Anvisa quando a lacuna era a nossa
+    lista de tarefas. A quinta nasceu do mesmo jeito: ingerido 2023, sobraram dez
+    alimentos do ciclo 2025 marcados como "ausência planejada" em setembro de
+    2026 — nove meses DEPOIS de a janela fechar. A ausência deixou de ser
+    planejada e ninguém tinha avisado o instrumento.
+
+    Por isso quem manda aqui é `hoje`, e não um ciclo de referência: o que torna
+    uma ausência planejada ou não é o calendário ter passado, não o rótulo que se
+    escolheu para a tela.
     """
     cronograma = cat.PARA_CRONOGRAMA if cronograma is None else cronograma
 
@@ -278,6 +284,9 @@ def observacoes(resultados: Sequence[Resultado], ciclo: int,
     for r in sorted(resultados, key=lambda x: x.ciclo):
         medidos[chave(r.alimento)] = r
     ingeridos = {r.ciclo for r in resultados}
+    publicados = set(cat.PARA_CICLOS_PUBLICADOS if ciclos_publicados is None
+                     else ciclos_publicados)
+
     fora = []
     for alimento in sorted(cronograma):
         r = medidos.get(chave(alimento))
@@ -285,21 +294,40 @@ def observacoes(resultados: Sequence[Resultado], ciclo: int,
             fora.append(lat.Observacao(data_referencia=referencia_do_ciclo(r.ciclo),
                                        n_amostras=r.n_amostras, unidade=alimento))
             continue
-        passados = [c for c in cronograma.get(alimento, ()) if c <= ciclo]
-        fora.append(lat.Observacao(
-            unidade=alimento,
-            planejada_para_depois=lat.planejada_para_depois(
-                cronograma, alimento, ciclo),
-            nao_apurado=bool(passados) and not any(c in ingeridos for c in passados)))
+
+        ciclos = cronograma.get(alimento, ())
+        encerrados = [c for c in ciclos if referencia_do_ciclo(c) < hoje]
+
+        if not encerrados:
+            # Todo ciclo deste alimento ainda está por vir.
+            fora.append(lat.Observacao(unidade=alimento, planejada_para_depois=True))
+        elif any(c in ingeridos for c in encerrados):
+            # Lemos o relatório do ciclo dele e ele não estava lá. Achado de verdade.
+            fora.append(lat.Observacao(unidade=alimento))
+        elif any(c in publicados for c in encerrados):
+            # O relatório existe; nós é que não fomos ler. Dívida nossa.
+            fora.append(lat.Observacao(unidade=alimento, nao_apurado=True))
+        else:
+            # A janela fechou e nenhum relatório saiu.
+            fora.append(lat.Observacao(
+                unidade=alimento,
+                ciclo_encerrado_em=referencia_do_ciclo(max(encerrados))))
     return tuple(fora)
 
 
-def avaliar_ciclo(resultados: Sequence[Resultado], ciclo: int, hoje: date,
+def avaliar_plano(resultados: Sequence[Resultado], hoje: date,
                   eixo_pedido: Optional[str] = None,
-                  cronograma: Dict[str, tuple] = None) -> Sequence[lat.Avaliacao]:
-    """Avalia os 36 alimentos do plano contra a régua do PARA."""
+                  cronograma: Dict[str, tuple] = None,
+                  ciclos_publicados: Sequence[int] = None) -> Sequence[lat.Avaliacao]:
+    """Avalia os 36 alimentos do Plano Plurianual contra a régua do PARA.
+
+    Chamava-se `avaliar_ciclo` e recebia um ciclo de referência. O nome mentia: o
+    que se avalia é o PLANO inteiro, e o recorte temporal que importa é `hoje` —
+    foi tratar um ciclo como referência que deixou dez alimentos marcados como
+    ausência planejada nove meses depois de a janela deles fechar.
+    """
     return tuple(lat.avaliar(cat.ANVISA_PARA, o, hoje, eixo_pedido)
-                 for o in observacoes(resultados, ciclo, cronograma))
+                 for o in observacoes(resultados, hoje, cronograma, ciclos_publicados))
 
 
 # ─────────────────────────── entrada e saída ───────────────────────────

@@ -71,6 +71,7 @@ class Temporal:
     NADA_LOCALIZADO = "nada localizado"
     NAO_APURADO = "não apurado por nós"
     AUSENCIA_PLANEJADA = "ausência planejada"
+    CICLO_SEM_PUBLICACAO = "ciclo encerrado, resultado não publicado"
     SEM_CALENDARIO = "sem calendário"
 
 
@@ -145,6 +146,19 @@ class Observacao:
     # cobrar do órgão o que o plano dele não previa; aqui, o que nós não fomos ver.
     nao_apurado: bool = False
 
+    # A janela em que o órgão se comprometeu a medir esta unidade fechou nesta
+    # data, e nada foi publicado.
+    #
+    # Distinto de tudo o mais: não é ausência planejada, porque o prazo passou;
+    # não é pendência nossa, porque não há relatório a apurar; e NÃO É ATRASO,
+    # porque atraso exige prazo de publicação — e o PARA não declara nenhum. O
+    # plano promete MEDIR a cada três anos; sobre publicar, ele silencia.
+    #
+    # É esse silêncio que o campo captura, e o motivo precisa dizê-lo com todas as
+    # letras: afirma-se que a janela fechou e o resultado não apareceu, não que
+    # alguém descumpriu prazo. A afirmação é mais fraca, e é a que se sustenta.
+    ciclo_encerrado_em: Optional[date] = None
+
     @property
     def data_usavel(self) -> Tuple[Optional[date], str]:
         """A data que sustenta a classificação, e de que tipo ela é.
@@ -189,7 +203,8 @@ class Avaliacao:
         """
         fora = []
         if self.temporal in (Temporal.ATRASADO, Temporal.ATRASO_PROLONGADO,
-                             Temporal.NADA_LOCALIZADO):
+                             Temporal.NADA_LOCALIZADO,
+                             Temporal.CICLO_SEM_PUBLICACAO):
             fora.append(self.temporal)
         if self.amostral == Amostral.ABAIXO_DA_META:
             fora.append(self.amostral)
@@ -273,6 +288,16 @@ def _temporal(fonte: Fonte, obs: Observacao, hoje: date) -> Tuple[str, str, str]
         return (Temporal.NAO_APURADO, base,
                 "pendência nossa: o ciclo em que esta unidade é medida ainda não "
                 "foi apurado por nós — nada aqui é afirmação sobre o órgão")
+    if desde is None and obs.ciclo_encerrado_em is not None:
+        meses = meses_entre(obs.ciclo_encerrado_em, hoje)
+        return (Temporal.CICLO_SEM_PUBLICACAO, base,
+                "a janela de medição declarada pelo órgão encerrou em %s, há %.0f "
+                "meses, e nenhum resultado foi localizado para esta unidade. NÃO se "
+                "afirma atraso: a régua desta fonte promete MEDIR a cada %d meses e "
+                "não declara prazo para PUBLICAR. O que se afirma é que a janela "
+                "fechou e o resultado não apareceu — régua: %s"
+                % (obs.ciclo_encerrado_em.isoformat(), meses,
+                   fonte.periodicidade_meses, fonte.regua_fonte))
     if desde is None:
         return (Temporal.NADA_LOCALIZADO, base,
                 "nenhum resultado localizado no recurso consultado — o que não "

@@ -149,8 +149,8 @@ A avaliação devolve quatro dimensões separadas, porque têm remédios diferen
 from datetime import date
 from painel_san.modulos.alimento_seguro import latencia, para
 
-avaliacoes = para.avaliar_ciclo(para.ler_csv("dados/para_2024.csv"),
-                                ciclo=2024, hoje=date.today())
+avaliacoes = para.avaliar_plano(para.ler_csv("dados/para_2024.csv"),
+                                hoje=date.today())
 soja = [a for a in avaliacoes if a.unidade == "soja"][0]
 
 soja.temporal     # 'no prazo'
@@ -185,9 +185,23 @@ streamlit run app.py
 ```
 
 O **mapa de frieza** acende onde não há dado. A grade é o Plano Plurianual —
-36 alimentos — e as células se dividem em três leituras que nunca são somadas:
-lacuna da fonte, ausência planejada (o plano marca o alimento para um ciclo futuro)
-e **pendência nossa** (ainda não apuramos aquele ciclo). O terceiro balde existe
+36 alimentos — e as células se dividem em cinco leituras que nunca são somadas:
+**sem resultado público** (a janela de medição fechou e nada saiu), **medido aquém
+da régua**, **pendência nossa** (ainda não apuramos aquele ciclo), ausência
+planejada e medido dentro da régua.
+
+Em setembro de 2026, com os ciclos 2023 e 2024 apurados, o plano está assim:
+dez alimentos sem nenhum resultado público — todo o ciclo 2025, encerrado em
+dezembro e ainda não publicado — e nove medidos abaixo da meta amostral que a
+própria Anvisa calculou.
+
+Sobre os dez, o instrumento **não diz que a Anvisa está atrasada**, e a razão é o
+achado: o Plano Plurianual promete *medir* cada alimento uma vez por ciclo e não
+declara prazo algum para *publicar* o resultado. Não há régua contra a qual cobrar.
+O que se afirma é o verificável — a janela fechou há nove meses e o resultado não
+apareceu.
+
+O balde "pendência nossa" existe
 porque um instrumento que mede a falta alheia precisa medir a própria com o mesmo
 rigor.
 

@@ -166,16 +166,21 @@ def test_distinguiveis_contem_a_leitura_do_painel():
 def test_avalia_os_36_do_plano_e_nao_os_14_medidos():
     """A diferença é o módulo inteiro: percorrer os medidos mostra o que existe;
     percorrer o plano mostra o que falta, que é o objeto."""
-    avs = para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)
+    avs = para.avaliar_plano(para.ler_csv(CSV), HOJE)
     assert len(avs) == 36 == len(cat.PARA_CRONOGRAMA)
 
 
-def test_os_quatro_desfechos_aparecem():
-    avs = para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)
+def test_os_desfechos_do_plano_aparecem():
+    """Com só o ciclo 2024 ingerido, em setembro de 2026: os alimentos de 2023
+    são pendência nossa (o relatório existe e não o lemos) e os de 2025 estão sem
+    resultado público (a janela fechou e nada saiu)."""
+    avs = para.avaliar_plano(para.ler_csv(CSV), HOJE)
     estados = {a.temporal for a in avs}
     assert lat.Temporal.NO_PRAZO in estados
-    assert lat.Temporal.AUSENCIA_PLANEJADA in estados
     assert lat.Temporal.NAO_APURADO in estados
+    assert lat.Temporal.CICLO_SEM_PUBLICACAO in estados
+    assert lat.Temporal.AUSENCIA_PLANEJADA not in estados, (
+        "nenhum ciclo do plano 2023-2025 ainda está por vir em 2026")
 
 
 def test_pendencia_nossa_nao_alerta_contra_a_anvisa():
@@ -185,7 +190,7 @@ def test_pendencia_nossa_nao_alerta_contra_a_anvisa():
     lacuna da Anvisa — quando a lacuna era a nossa lista de tarefas. Um painel
     assim diria o contrário do verdadeiro, e cairia diante de quem tivesse lido o
     relatório de 2023."""
-    avs = para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)
+    avs = para.avaliar_plano(para.ler_csv(CSV), HOJE)
     nossas = [a for a in avs if a.pendencias_nossas]
     assert nossas, "os alimentos de 2023 são pendência nossa"
     for a in nossas:
@@ -194,18 +199,20 @@ def test_pendencia_nossa_nao_alerta_contra_a_anvisa():
         assert "pendência nossa" in a.motivo
 
 
-def test_os_alertas_reais_sao_so_os_seis_abaixo_da_meta():
-    """Os seis que o próprio relatório documenta. Nenhum a mais."""
-    avs = para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)
-    com_alerta = sorted(a.unidade for a in avs if a.tem_alerta)
-    assert com_alerta == ["abobrinha", "banana", "couve", "mamao", "pepino", "soja"]
+def test_abaixo_da_meta_sao_so_os_seis_que_o_relatorio_documenta():
+    """Nenhum a mais. Os demais alertas do plano vêm de ausência de resultado,
+    que é outra falha, com outro remédio."""
+    avs = para.avaliar_plano(para.ler_csv(CSV), HOJE)
+    magros = sorted(a.unidade for a in avs
+                    if a.amostral == lat.Amostral.ABAIXO_DA_META)
+    assert magros == ["abobrinha", "banana", "couve", "mamao", "pepino", "soja"]
 
 
 def test_ciclo_ingerido_com_alimento_ausente_e_achado_de_verdade():
     """A distinção que dá sentido à anterior: se lemos o relatório do ciclo em que
     o alimento deveria estar e ele não estava, aí sim é lacuna do órgão."""
     cronograma = {"fantasma": (2024,)}
-    obs = para.observacoes((para.Resultado(2024, "Cebola", 238, 31),), 2024, cronograma)
+    obs = para.observacoes((para.Resultado(2024, "Cebola", 238, 31),), HOJE, cronograma)
     assert len(obs) == 1 and not obs[0].nao_apurado, (
         "o ciclo 2024 foi ingerido; a ausência do alimento nele é achado")
     av = lat.avaliar(cat.ANVISA_PARA, obs[0], HOJE)
@@ -218,11 +225,11 @@ def test_a_medicao_mais_recente_vence_quando_ha_dois_ciclos():
     qual medição prevalece dependeria da ordem em que os CSVs foram concatenados
     — certo por acidente hoje, errado amanhã, sem nada falhar."""
     res = (para.Resultado(2024, "Uva", 234, 66), para.Resultado(2023, "Uva", 230, 40))
-    obs = {o.unidade: o for o in para.observacoes(res, 2024, {"uva": (2023, 2024)})}
+    obs = {o.unidade: o for o in para.observacoes(res, HOJE, {"uva": (2023, 2024)})}
     assert obs["uva"].n_amostras == 234
     assert obs["uva"].data_referencia == date(2024, 12, 31)
     # e a ordem inversa na entrada não pode mudar o resultado
-    obs2 = {o.unidade: o for o in para.observacoes(tuple(reversed(res)), 2024,
+    obs2 = {o.unidade: o for o in para.observacoes(tuple(reversed(res)), HOJE,
                                                    {"uva": (2023, 2024)})}
     assert obs2["uva"].n_amostras == 234
 
@@ -257,15 +264,31 @@ def test_chave_normaliza_hifen():
     assert para.chave("Batata-Doce") == para.chave(" batata  doce ")
 
 
-def test_morango_continua_sendo_ausencia_planejada():
-    """O caso que abriu o módulo, agora com dado real ao redor."""
-    avs = {a.unidade: a for a in para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)}
-    assert avs["morango"].temporal == lat.Temporal.AUSENCIA_PLANEJADA
-    assert not avs["morango"].tem_alerta
+def test_o_morango_era_ausencia_planejada_e_deixou_de_ser():
+    """O caso que abriu o módulo, e que o tempo virou do avesso.
+
+    O morango é medido só no ciclo 2025. Enquanto 2025 não tinha fechado, não
+    havia o que cobrar: ausência planejada, sem alerta. Em setembro de 2026 a
+    janela fechou há nove meses e a Anvisa não publicou o relatório — a ausência
+    deixou de ser planejada, e ninguém tinha avisado o instrumento.
+
+    Este teste guarda as duas metades, porque a lição é a segunda: um estado que
+    depende do calendário precisa ser recalculado contra `hoje`, nunca fixado."""
+    antes = para.avaliar_plano(para.ler_csv(CSV), date(2025, 6, 1))
+    assert {a.unidade: a for a in antes}["morango"].temporal == (
+        lat.Temporal.AUSENCIA_PLANEJADA)
+
+    agora = {a.unidade: a for a in para.avaliar_plano(para.ler_csv(CSV), HOJE)}
+    assert agora["morango"].temporal == lat.Temporal.CICLO_SEM_PUBLICACAO
+    assert agora["morango"].tem_alerta, "a janela fechou; agora há o que mostrar"
+    m = agora["morango"].motivo
+    assert "NÃO se afirma atraso" in m, (
+        "sem prazo de publicação declarado, o instrumento não pode falar em atraso")
+    assert "2025-12-31" in m
 
 
 def test_a_cobertura_da_meta_chega_avaliada():
-    avs = {a.unidade: a for a in para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)}
+    avs = {a.unidade: a for a in para.avaliar_plano(para.ler_csv(CSV), HOJE)}
     assert avs["soja"].cobertura_da_meta == pytest.approx(85 / 231)
     assert avs["soja"].amostral == lat.Amostral.ABAIXO_DA_META
     assert avs["laranja"].amostral == lat.Amostral.ATINGE_A_META
@@ -274,7 +297,7 @@ def test_a_cobertura_da_meta_chega_avaliada():
 def test_a_data_e_de_referencia_e_nao_de_publicacao():
     """Do PDF se extrai a que ciclo o dado se refere, nunca quando ele foi
     publicado. A avaliação precisa registrar essa diferença, não apagá-la."""
-    avs = {a.unidade: a for a in para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)}
+    avs = {a.unidade: a for a in para.avaliar_plano(para.ler_csv(CSV), HOJE)}
     assert avs["soja"].base_temporal == lat.Base.REFERENCIA
     assert "publicação desconhecida" in avs["soja"].motivo
 

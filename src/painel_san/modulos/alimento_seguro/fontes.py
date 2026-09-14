@@ -26,7 +26,8 @@ SOBRE AS DIMENSÕES SEREM INDEPENDENTES
     Por isso o catálogo não tem um campo "situação". Quem avalia é `latencia.py`,
     e devolve uma dimensão de cada vez.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import date
 from typing import Optional, Tuple
 
 
@@ -318,6 +319,25 @@ def por_id(identificador: str) -> Fonte:
 # como lacuna. É ausência PLANEJADA — o morango está marcado para 2025. Confundir
 # as duas destrói a credibilidade do instrumento no primeiro leitor que conhecer
 # o plano.
+# Ciclos do Plano Plurianual cujo relatório a Anvisa já publicou, conferido na
+# página oficial de relatórios do PARA em 14/09/2026.
+#
+# O ciclo 2025 encerrou em dezembro de 2025 e não tem relatório publicado. Isso
+# não é atraso — a Anvisa promete MEDIR cada alimento uma vez por ciclo e NÃO
+# declara prazo para publicar o resultado. É a distinção entre medir e publicar
+# aparecendo com consequência: o instrumento pode afirmar que a janela fechou e o
+# resultado não apareceu, e não pode afirmar que alguém descumpriu prazo.
+#
+# A ausência de prazo de publicação é, ela própria, o achado. Nove meses depois do
+# fim do ciclo, dez dos trinta e seis alimentos do plano não têm resultado público
+# e não há régua contra a qual cobrá-los.
+#
+# Atualizar à mão quando um relatório novo sair — o registrador não detecta, pelo
+# mesmo motivo já documentado em `endpoint_estavel`: a página devolve text/html
+# tenha ou não relatório novo dentro dela.
+PARA_CICLOS_PUBLICADOS = (2023, 2024)
+PARA_PUBLICACAO_CONFERIDA_EM = date(2026, 9, 14)
+
 PARA_CRONOGRAMA = {
     "abacaxi": (2023,), "abobrinha": (2024,), "alface": (2023,), "alho": (2023,),
     "amendoim": (2025,), "arroz": (2023,), "aveia": (2024,), "banana": (2024,),

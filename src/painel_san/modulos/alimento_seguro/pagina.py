@@ -17,15 +17,25 @@ NÃO É UM MAPA DO BRASIL, E ISSO É PROPOSITAL
     fonte não tem. A grade é o Plano Plurianual: trinta e seis alimentos, um por
     célula, do jeito que a Anvisa os planejou.
 
-TRÊS BALDES, NUNCA SOMADOS
-    lacuna da fonte    o órgão não entregou o que prometeu
-    ausência planejada não devia haver dado agora; o plano marca para depois
-    pendência nossa    NÓS ainda não fomos ver
+CINCO BALDES, NUNCA SOMADOS
+    sem resultado público  a janela fechou e nada saiu; ou lemos o relatório e o
+                           alimento não estava nele
+    medido aquém da régua  há dado, mas abaixo do que o próprio órgão prometeu
+    pendência nossa        NÓS ainda não fomos ver
+    ausência planejada     não devia haver dado agora; o plano marca para depois
+    medido, dentro da régua
 
-    Somar os três daria um número maior e uma afirmação falsa. O terceiro existe
-    porque um instrumento que mede a falta alheia precisa medir a própria com o
-    mesmo rigor — sem ele, doze alimentos do ciclo 2023 apareceriam como culpa da
-    Anvisa quando são a nossa lista de tarefas.
+    Somá-los daria um número maior e uma afirmação falsa. Dois deles existem por
+    lições que custaram caro:
+
+    "pendência nossa" nasceu de ver doze alimentos do ciclo 2023 acenderem como
+    culpa da Anvisa quando eram a nossa lista de tarefas. Um instrumento que mede
+    a falta alheia precisa medir a própria com o mesmo rigor.
+
+    "sem resultado público" nasceu de separar dado que não existe de dado que
+    existe e é magro. Pintá-los igual esconderia o achado mais forte — dez dos
+    trinta e seis alimentos do plano sem nenhum resultado público — atrás de "a
+    soja teve 85 amostras".
 
 POR QUE A LÓGICA NÃO SABE DESENHAR
     `montar` e `resumo` não importam plotly nem streamlit: recebem avaliações e
@@ -42,13 +52,21 @@ from painel_san.modulos.alimento_seguro import latencia as lat
 
 
 class Balde:
-    """Em qual das três leituras a célula cai. Nunca somar."""
-    LACUNA = "lacuna da fonte"
+    """Em qual leitura a célula cai. Nunca somar.
+
+    `SEM_RESULTADO` e `LACUNA` são ambos falha da fonte e mesmo assim não se
+    misturam: um é dado que não existe publicamente, o outro é dado que existe e
+    é magro. Pintá-los igual esconderia o achado mais forte do instrumento — dez
+    dos trinta e seis alimentos do plano sem nenhum resultado público — atrás de
+    "a soja teve 85 amostras".
+    """
+    SEM_RESULTADO = "sem resultado público"
+    LACUNA = "medido aquém da régua"
     EM_DIA = "medido, dentro da régua"
     PLANEJADA = "ausência planejada"
     NOSSA = "pendência nossa"
 
-    ORDEM = (LACUNA, NOSSA, PLANEJADA, EM_DIA)
+    ORDEM = (SEM_RESULTADO, LACUNA, NOSSA, PLANEJADA, EM_DIA)
 
 
 # Paleta do mapa de frieza. Frio e saliente onde falta; morno e discreto onde há.
@@ -58,10 +76,11 @@ class Balde:
 # o alimento está inseguro, afirma que o dado não permite saber. Azul profundo diz
 # vazio, que é o que se está mostrando.
 CORES = {
-    Balde.LACUNA: "#1b4a6b",      # azul profundo — o vazio que o órgão deixou
-    Balde.NOSSA: "#8a8f98",       # cinza — nossa dívida, visível e sem acusar
-    Balde.PLANEJADA: "#dfe3e8",   # quase vazio — ausência legítima
-    Balde.EM_DIA: "#c88a3d",      # âmbar contido — há dado aqui
+    Balde.SEM_RESULTADO: "#12354d",  # o mais frio: nada existe publicamente
+    Balde.LACUNA: "#3c7ba3",         # azul médio — existe, mas aquém da régua
+    Balde.NOSSA: "#8a8f98",          # cinza — nossa dívida, visível e sem acusar
+    Balde.PLANEJADA: "#dfe3e8",      # quase vazio — ausência legítima
+    Balde.EM_DIA: "#c88a3d",         # âmbar contido — há dado aqui
 }
 
 SIMBOLOS = {
@@ -75,7 +94,8 @@ SIMBOLOS = {
     #
     # O par quadrado/losango separa os dois tipos de problema; o par
     # círculo/círculo pálido separa "há dado" de "ainda não devia haver".
-    Balde.LACUNA: "square",
+    Balde.SEM_RESULTADO: "square",
+    Balde.LACUNA: "triangle-up",
     Balde.NOSSA: "diamond",
     Balde.PLANEJADA: "circle",
     Balde.EM_DIA: "circle",
@@ -84,7 +104,8 @@ SIMBOLOS = {
 # Contorno por balde. A ausência planejada é a única que se apaga de propósito:
 # ela não é falha de ninguém e não deve competir pelo olho.
 CONTORNOS = {
-    Balde.LACUNA: "#12354d",
+    Balde.SEM_RESULTADO: "#081722",
+    Balde.LACUNA: "#25536e",
     Balde.NOSSA: "#5f646b",
     Balde.PLANEJADA: "#c3c9d0",
     Balde.EM_DIA: "#9a6829",
@@ -152,10 +173,12 @@ class Resumo:
         return sum(self.contagem.values())
 
     def frase(self) -> str:
-        """Uma linha honesta, com os três baldes separados."""
-        return ("%d de %d unidades com lacuna da fonte; %d ainda não apuradas por "
-                "nós; %d de ausência planejada."
-                % (self.contagem.get(Balde.LACUNA, 0), self.total,
+        """Uma linha honesta, com os baldes separados."""
+        return ("%d de %d unidades sem nenhum resultado público; %d medidas aquém "
+                "da régua do próprio órgão; %d ainda não apuradas por nós; %d de "
+                "ausência planejada."
+                % (self.contagem.get(Balde.SEM_RESULTADO, 0), self.total,
+                   self.contagem.get(Balde.LACUNA, 0),
                    self.contagem.get(Balde.NOSSA, 0),
                    self.contagem.get(Balde.PLANEJADA, 0)))
 
@@ -172,6 +195,9 @@ def balde_de(av: lat.Avaliacao) -> str:
         return Balde.NOSSA
     if av.temporal == lat.Temporal.AUSENCIA_PLANEJADA:
         return Balde.PLANEJADA
+    if av.temporal in (lat.Temporal.CICLO_SEM_PUBLICACAO,
+                       lat.Temporal.NADA_LOCALIZADO):
+        return Balde.SEM_RESULTADO
     if av.tem_alerta:
         return Balde.LACUNA
     return Balde.EM_DIA
@@ -315,7 +341,7 @@ def figura(celulas: Sequence[Celula], titulo: str = "Mapa de frieza — PARA"):
 
 
 # ─────────────────────────── aplicação ───────────────────────────
-def app(padrao_csv: str = "dados/para_*.csv", ciclo: int = 2024,
+def app(padrao_csv: str = "dados/para_*.csv",
         hoje: Optional[date] = None) -> None:
     """Página Streamlit. Importada tarde, para o resto do módulo não depender dela.
 
@@ -332,7 +358,7 @@ def app(padrao_csv: str = "dados/para_*.csv", ciclo: int = 2024,
     hoje = hoje or date.today()
     resultados = tuple(r for caminho in sorted(glob.glob(padrao_csv))
                        for r in para.ler_csv(caminho))
-    avaliacoes = para.avaliar_ciclo(resultados, ciclo, hoje)
+    avaliacoes = para.avaliar_plano(resultados, hoje)
     celulas = montar(avaliacoes)
     r = resumo(celulas, hoje)
 
