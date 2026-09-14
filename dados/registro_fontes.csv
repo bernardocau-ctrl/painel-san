@@ -1,0 +1,6 @@
+carimbo,fonte_id,url,metodo,http_status,content_type,content_length,last_modified,erro
+2026-09-14T13:57:40+00:00,ibama_comercializacao,https://stibamadadosabertosprd.blob.core.windows.net/dados-abertos/dados/AGROTOXICOS/RelatoriosdeComercializacaodeAgrotoxicos/relatorios_comercializacao_agrotoxicos.csv,HEAD,200,application/octet-stream,13575367,"Mon, 14 Sep 2026 04:46:00 GMT",
+2026-09-14T13:57:41+00:00,anvisa_monografias,https://dados.anvisa.gov.br/dados/TA_MONOGRAFIA_AGROTOXICO.csv,HEAD,200,application/octet-stream,2486374,"Fri, 11 Sep 2026 14:04:08 GMT",
+2026-09-14T13:57:41+00:00,anvisa_para,https://www.gov.br/anvisa/pt-br/assuntos/agrotoxicos/programa-de-analise-de-residuos-em-alimentos/relatorios-do-programa,HEAD,200,text/html,,,
+2026-09-14T13:57:41+00:00,ms_sisagua_agrotoxicos,https://dados.gov.br/dados/busca?termo=sisagua,HEAD,200,text/html,9632,"Tue, 21 Jul 2026 14:35:22 GMT",
+2026-09-14T13:57:41+00:00,mapa_pncrc,https://www.gov.br/agricultura/pt-br/assuntos/inspecao/produtos-animal/plano-de-nacional-de-controle-de-residuos-e-contaminantes,GET,206,text/html,1,,

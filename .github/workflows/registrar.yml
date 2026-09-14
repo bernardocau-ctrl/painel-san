@@ -1,0 +1,64 @@
+name: registrar fontes
+
+# Observa mensalmente o estado das fontes de vigilância e commita o resultado.
+#
+# O valor não está em nenhuma rodada isolada — está no acúmulo. Um mês que passa
+# sem registro é um ponto que não existe mais, e por isso este workflow importa
+# mais que a maioria: ele é a única parte do projeto cujo custo de atraso não se
+# recupera com esforço depois.
+#
+# Efeito colateral que vale notar: como cada rodada gera um commit, o histórico
+# do repositório passa a ser, ele próprio, evidência de que a medição foi
+# contínua e não retroalimentada.
+
+on:
+  schedule:
+    # Dia 1 de cada mês, 09:00 UTC (06:00 em Brasília).
+    - cron: "0 9 1 * *"
+  workflow_dispatch:        # permite rodar à mão, para testar ou tapar buraco
+
+permissions:
+  contents: write           # necessário para commitar o registro
+
+jobs:
+  registrar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Observar as fontes
+        # `|| true` de propósito: fonte fora do ar é o que se quer registrar, não
+        # motivo para falhar a rodada. O registrador já devolve 0 nesse caso, e
+        # isto é cinto de segurança contra erro inesperado apagar a observação.
+        run: |
+          python -m painel_san.modulos.alimento_seguro.registrador \
+            -o dados/registro_fontes.csv | tee saida.txt || true
+
+      - name: Commitar o que mudou
+        run: |
+          if git diff --quiet -- dados/registro_fontes.csv; then
+            echo "Nada mudou no registro — nenhuma observação foi gravada."
+            exit 1
+          fi
+          git config user.name "registrador painel-san"
+          git config user.email "noreply@github.com"
+          git add dados/registro_fontes.csv
+          git commit -m "Registro das fontes — $(date -u +%Y-%m-%d)
+
+          $(cat saida.txt)"
+          git push
+
+      - name: Resumo
+        if: always()
+        run: cat saida.txt >> "$GITHUB_STEP_SUMMARY" || true

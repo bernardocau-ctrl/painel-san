@@ -68,6 +68,20 @@ class Fonte:
     regua_fonte: str
     regua_verificada: bool = False
 
+    # A URL acima devolve o DADO, ou só a página onde ele mora?
+    #
+    # Descoberto na primeira rodada do registrador, em 14/09/2026: três das cinco
+    # fontes respondem text/html, porque não existe endereço estável que entregue
+    # o arquivo corrente. No IBAMA, uma URL fixa sempre devolve o CSV atualizado.
+    # No PARA, cada relatório tem um identificador numérico opaco e não há índice
+    # legível — para saber o que há de novo, é preciso um humano abrir a página.
+    #
+    # Isso é uma falha de legibilidade mais profunda que o formato do arquivo:
+    # nem a descoberta do dado é automatizável. E é distinta de "o arquivo é PDF",
+    # porque tem outro remédio — publicar um índice resolve uma, converter o
+    # arquivo resolve a outra.
+    endpoint_estavel: bool = True
+
     # Em que eixos o dado pode ser desagregado. Pedir recorte fora desta tupla
     # não é lacuna de medição: é limite de granularidade, que é outra falha.
     granularidade: Tuple[str, ...] = ()
@@ -129,6 +143,7 @@ ANVISA_PARA = Fonte(
     url=("https://www.gov.br/anvisa/pt-br/assuntos/agrotoxicos/"
          "programa-de-analise-de-residuos-em-alimentos/relatorios-do-programa"),
     formato=Formato.PDF,
+    endpoint_estavel=False,
     periodicidade_meses=36,
     regua_fonte="Plano Plurianual 2023-2025 do PARA, Tabela 1",
     regua_verificada=True,    # lido no relatório do ciclo 2024, p. 29
@@ -147,6 +162,7 @@ MS_SISAGUA_AGROTOXICOS = Fonte(
     orgao="Ministério da Saúde",
     url="https://dados.gov.br/dados/busca?termo=sisagua",
     formato=Formato.CSV,
+    endpoint_estavel=False,
     periodicidade_meses=3,
     regua_fonte="Portaria GM/MS nº 888/2021 — monitoramento trimestral obrigatório",
     regua_verificada=False,   # a periodicidade consta em reportagem; falta ler a portaria
@@ -163,6 +179,7 @@ MAPA_PNCRC = Fonte(
     url=("https://www.gov.br/agricultura/pt-br/assuntos/inspecao/produtos-animal/"
          "plano-de-nacional-de-controle-de-residuos-e-contaminantes"),
     formato=Formato.PDF,
+    endpoint_estavel=False,
     periodicidade_meses=12,
     regua_fonte="Planos anuais de amostragem declarados pelo MAPA",
     regua_verificada=False,   # falta ler o manual instrutivo do PNCRC
