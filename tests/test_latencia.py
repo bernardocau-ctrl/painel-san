@@ -328,6 +328,40 @@ def test_o_sisagua_e_semestral_e_nao_trimestral():
     assert "2.472" in f.regua_fonte, "a tabela em vigor não é a da 888/2021"
 
 
+def test_regua_por_verificar_diz_o_que_falta_ler():
+    """Não basta marcar `regua_verificada=False`. Um False mudo vira dívida
+    esquecida; um False que nomeia o documento vira tarefa. Tentativa frustrada é
+    resultado, e fica registrada — inclusive para que ninguém a repita à toa."""
+    for f in fontes.CATALOGO:
+        if f.regua_verificada:
+            continue
+        assert f.observacao.strip(), "%s sem registro do que falta" % f.id
+        assert "14/09/2026" in f.observacao, (
+            "%s precisa datar a tentativa de verificação" % f.id)
+
+
+def test_o_pncrc_separa_promessa_de_medir_de_promessa_de_publicar():
+    """A distinção que o módulo inteiro passou a fazer, aplicada ao catálogo.
+
+    Plano anual de amostragem é compromisso de MEDIR. Não se achou compromisso de
+    PUBLICAR. Usar um para cobrar o outro é comparar coisas diferentes — e era
+    exatamente o erro que a separação de datas veio impedir."""
+    f = fontes.MAPA_PNCRC
+    assert "MEDIR, não de" in f.regua_fonte
+    assert "publicar" in f.regua_fonte.lower()
+
+
+def test_a_contradicao_da_regua_do_ibama_esta_registrada():
+    """A página do IBAMA diz semestral; há indício de que o decreto virou anual em
+    2021. Não se alcançou o consolidado. Mantemos o que o órgão declara de si —
+    e registramos que, se a mudança se confirmar, o achado passa a ser sobre a
+    página do IBAMA estar citando regra superada."""
+    f = fontes.IBAMA_COMERCIALIZACAO
+    assert f.periodicidade_meses == 6
+    assert "10.833" in f.regua_fonte or "10.833" in f.observacao
+    assert not f.regua_verificada
+
+
 def test_o_catalogo_registra_que_trimestre_significa_deteccao():
     """A inversão de leitura que a nota (9) impõe. Sem isso registrado, alguém
     lerá 'mede trimestralmente' como bom desempenho, quando é o oposto."""

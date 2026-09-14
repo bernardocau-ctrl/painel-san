@@ -138,15 +138,36 @@ IBAMA_COMERCIALIZACAO = Fonte(
          "relatorios_comercializacao_agrotoxicos.csv"),
     formato=Formato.CSV,
     periodicidade_meses=6,
-    regua_fonte="Relatório Semestral de Agrotóxicos, publicação declarada pelo IBAMA",
-    regua_verificada=False,   # a página fala em relatório semestral; falta conferir o ato
+    regua_fonte=("Art. 41 do Decreto 4.074/2002: empresas entregam dados 'até 31 de "
+                 "janeiro e 31 de julho de cada ano', conforme o Anexo VII. É a régua "
+                 "que o próprio IBAMA publica hoje na página do Relatório Semestral. "
+                 "RESSALVA: há indício de que o Decreto 10.833/2021 mudou esse artigo "
+                 "para anual — ver observação."),
+    regua_verificada=False,   # ver observação: tentativa de 14/09/2026 não concluiu
     tolerancia_dias=60,
     regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis: consolidar "
                       "declaração de empresa leva tempo, e o CSV é cumulativo."),
     granularidade=("uf", "semestre", "ingrediente_ativo", "classe_de_uso"),
-    observacao=("Venda por UF é onde o produto foi COMERCIALIZADO, não onde foi "
-                "aplicado nem onde o alimento foi consumido. Distribuidoras "
-                "concentram venda em alguns estados."),
+    observacao=(
+        "RÉGUA EM DISPUTA — tentativa de verificação em 14/09/2026, não concluída.\n\n"
+        "Duas versões do art. 41 do Decreto 4.074/2002 circulam:\n"
+        "  · a página do próprio IBAMA, hoje, diz semestral, 31/01 e 31/07, "
+        "citando o art. 41 e o Anexo VII;\n"
+        "  · fontes secundárias afirmam que o Decreto 10.833/2021 alterou esse "
+        "artigo para ANUAL, até 31 de janeiro.\n\n"
+        "O texto consolidado no Planalto recusou conexão em três tentativas, e a "
+        "cópia do decreto que o MAPA publica é anterior a 2021 (tem dezesseis "
+        "anotações de redação, nenhuma daquele ano). A Câmara devolveu 429.\n\n"
+        "Mantemos SEIS MESES porque a régua emprestada é a que o órgão declara de "
+        "si hoje, e o IBAMA declara semestral na sua própria página. Se a alteração "
+        "de 2021 se confirmar, o achado não é que erramos — é que o IBAMA está "
+        "publicando como vigente uma regra superada, o que é, ele próprio, uma "
+        "falha de legibilidade da fonte.\n\n"
+        "Para fechar: art. 41 do Decreto 4.074/2002 na redação consolidada, e o art. "
+        "correspondente do Decreto 10.833/2021.\n\n"
+        "Venda por UF é onde o produto foi COMERCIALIZADO, não onde foi aplicado nem "
+        "onde o alimento foi consumido. Distribuidoras concentram venda em alguns "
+        "estados."),
 )
 
 ANVISA_MONOGRAFIAS = Fonte(
@@ -244,15 +265,28 @@ MAPA_PNCRC = Fonte(
     formato=Formato.PDF,
     endpoint_estavel=False,
     periodicidade_meses=12,
-    regua_fonte="Planos anuais de amostragem declarados pelo MAPA",
-    regua_verificada=False,   # falta ler o manual instrutivo do PNCRC
+    regua_fonte=("Planos ANUAIS DE AMOSTRAGEM do MAPA — é promessa de MEDIR, não de "
+                 "publicar. Nenhum compromisso de divulgação periódica dos resultados "
+                 "foi localizado até 14/09/2026. Documento a ler: Portaria SDA/MAPA "
+                 "nº 1.266, de 16/04/2025, hoje a base do programa."),
+    regua_verificada=False,   # o manual do MAPA na wikisda não abriu; ver observação
     tolerancia_dias=90,
     regua_tolerancia=("Escolha nossa. Um trimestre sobre um plano anual, pela mesma "
                       "razão do PARA: o relatório de um ano não sai em janeiro."),
     granularidade=("cadeia_produtiva", "ano"),
-    observacao=("Cobre produtos de origem animal — carne, leite, ovos, mel — onde o "
-                "PARA cobre vegetal. Dois ministérios, dois desenhos, o mesmo "
-                "problema. Recorte 2007-2018 curado na Base dos Dados."),
+    observacao=(
+        "A DISTINÇÃO QUE FALTA AQUI É A MESMA DO MÓDULO INTEIRO.\n\n"
+        "O que o MAPA declara é um plano anual de AMOSTRAGEM. Isso é compromisso de "
+        "medir. Não se localizou, em 14/09/2026, nenhum compromisso de PUBLICAR "
+        "resultados com periodicidade definida — e as duas coisas não se deduzem uma "
+        "da outra.\n\n"
+        "Consequência prática: a periodicidade de doze meses aqui é a régua da "
+        "medição, e usá-la para cobrar publicação é comparar compromissos diferentes. "
+        "Enquanto isso não for resolvido, a avaliação temporal desta fonte deve ser "
+        "lida com a confiança que ela declara, que é a mais baixa do catálogo.\n\n"
+        "Cobre produtos de origem animal — carne, leite, ovos, mel — onde o PARA cobre "
+        "vegetal. Dois ministérios, dois desenhos, o mesmo problema. Recorte 2007-2018 "
+        "curado na Base dos Dados."),
 )
 
 CATALOGO = (
