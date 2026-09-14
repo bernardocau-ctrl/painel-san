@@ -95,22 +95,28 @@ def test_tolerancia_evita_alarme_no_dia_seguinte():
     assert not av.tem_alerta, "pendente dentro da tolerância não pinta a célula"
 
 
-def test_a_regua_percentual_antiga_punia_o_prazo_curto():
+def test_a_tolerancia_nao_e_mais_fracao_fixa_do_prazo():
     """O defeito que motivou a troca, travado como teste.
 
-    Com 15% do prazo, o PARA ganhava ~164 dias de perdão e o SISAGUA ~14: quanto
-    mais longo o compromisso, maior a folga absoluta. Agora cada fonte declara a
-    sua, e a do SISAGUA é o dobro do que a régua antiga lhe dava."""
-    assert fontes.MS_SISAGUA_AGROTOXICOS.tolerancia_dias == 30
-    antiga = 0.15 * fontes.MS_SISAGUA_AGROTOXICOS.periodicidade_meses * 30.44
-    assert antiga < 15
-    assert fontes.MS_SISAGUA_AGROTOXICOS.tolerancia_dias > antiga
+    Com 15% do prazo para todos, quanto mais longo o compromisso, maior a folga
+    absoluta — o PARA ganhava ~164 dias e o IBAMA ~27. Agora a fração cai
+    conforme o prazo cresce: quem promete pouco tempo tem mais margem
+    proporcional, porque um mês de atraso num semestre pesa menos que dois meses
+    num triênio."""
+    fracoes = sorted(
+        (f.periodicidade_meses, f.tolerancia_dias / (f.periodicidade_meses * 30.44))
+        for f in fontes.CATALOGO if f.tem_calendario)
+    assert len(fracoes) >= 3
+    assert len(set(round(x, 3) for _, x in fracoes)) > 1, (
+        "se todas as frações fossem iguais, teríamos reinventado a régua percentual")
+    # prazo mais curto do catálogo tem fração maior que o mais longo
+    assert fracoes[0][1] > fracoes[-1][1]
 
 
 def test_atraso_prolongado_se_distingue_de_atraso():
     """Um ciclo perdido e catorze ciclos perdidos não podem ter a mesma cor."""
-    um_pouco = Observacao(data_publicacao=date(2026, 3, 1))   # ~1,1 trimestre além
-    muito = Observacao(data_publicacao=date(2022, 12, 31))    # ~14 trimestres além
+    um_pouco = Observacao(data_publicacao=date(2025, 11, 1))  # ~4,4 meses além do prazo
+    muito = Observacao(data_publicacao=date(2022, 12, 31))    # ~7 semestres além
     a = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, um_pouco, HOJE)
     b = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, muito, HOJE)
     assert a.temporal == Temporal.ATRASADO
@@ -242,20 +248,30 @@ def test_regua_lida_no_primario_mais_publicacao_observada_da_confianca_alta():
     assert av.confianca == Confianca.ALTA
 
 
-def test_regua_de_reportagem_sobre_data_inferida_da_confianca_baixa():
-    """O pior caso do catálogo, e é justamente o SISAGUA — a fonte sobre a qual
-    mais se quer falar. O painel precisa mostrar que essa cor pesa menos."""
-    obs = Observacao(data_referencia=date(2022, 12, 31))
-    av = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, obs, HOJE)
-    assert not fontes.MS_SISAGUA_AGROTOXICOS.regua_verificada
+def test_regua_por_verificar_sobre_data_inferida_da_confianca_baixa():
+    """O pior caso do catálogo: régua não conferida no primário e data que veio do
+    documento, não da observação. O painel precisa mostrar que essa cor pesa menos."""
+    obs = Observacao(data_referencia=date(2018, 12, 31))
+    av = latencia.avaliar(fontes.MAPA_PNCRC, obs, HOJE)
+    assert not fontes.MAPA_PNCRC.regua_verificada
     assert av.base_temporal == Base.REFERENCIA
     assert av.confianca == Confianca.BAIXA
 
 
 def test_um_ingrediente_bom_de_dois_da_moderada():
-    obs = Observacao(data_publicacao=date(2022, 12, 31))
-    av = latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, obs, HOJE)
+    obs = Observacao(data_publicacao=date(2018, 12, 31))
+    av = latencia.avaliar(fontes.MAPA_PNCRC, obs, HOJE)
     assert av.confianca == Confianca.MODERADA
+
+
+def test_ler_a_portaria_promoveu_a_confianca_do_sisagua():
+    """Efeito concreto de uma tarde de leitura: a mesma observação que antes valia
+    confiança BAIXA agora vale MODERADA, e vale ALTA assim que o registrador
+    conseguir datar a publicação. Nada no dado mudou — mudou o que sabemos da régua."""
+    ref = Observacao(data_referencia=date(2022, 12, 31))
+    pub = Observacao(data_publicacao=date(2022, 12, 31))
+    assert latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, ref, HOJE).confianca == Confianca.MODERADA
+    assert latencia.avaliar(fontes.MS_SISAGUA_AGROTOXICOS, pub, HOJE).confianca == Confianca.ALTA
 
 
 def test_sem_calendario_nao_tem_confianca_a_declarar():
@@ -289,22 +305,35 @@ def test_toda_fonte_declara_a_origem_da_regua():
 
 
 def test_regua_nao_verificada_esta_sinalizada():
-    """Metade do catálogo ainda não teve a régua conferida no documento primário.
+    """Parte do catálogo ainda não teve a régua conferida no documento primário.
     O teste não reprova por isso — registra quais faltam, para não esquecermos."""
     pendentes = [f.id for f in fontes.CATALOGO if not f.regua_verificada]
-    assert set(pendentes) == {"ibama_comercializacao", "ms_sisagua_agrotoxicos",
-                              "mapa_pncrc"}, (
+    assert set(pendentes) == {"ibama_comercializacao", "mapa_pncrc"}, (
         "mudou a lista de réguas por verificar: %s" % pendentes)
 
 
-def test_a_regua_do_sisagua_registra_que_a_frequencia_e_condicional():
-    """A Portaria 888/2021 condiciona a frequência ao parâmetro, ao manancial e ao
-    resultado anterior. Enquanto o artigo não for lido no primário, o catálogo
-    precisa carregar a ressalva junto da régua — senão o instrumento afirma mais
-    do que sabe sobre a fonte que ele mais quer cobrar."""
-    r = fontes.MS_SISAGUA_AGROTOXICOS.regua_fonte
-    assert "condiciona" in r
-    assert not fontes.MS_SISAGUA_AGROTOXICOS.regua_verificada
+def test_o_sisagua_e_semestral_e_nao_trimestral():
+    """Lido no Anexo 13 do Anexo XX em 14/09/2026.
+
+    O catálogo dizia 'trimestral obrigatório', vindo de reportagem, e estava
+    errado. Agrotóxicos caem em 'Demais parâmetros': 1 amostra SEMESTRAL na saída
+    do tratamento, superficial ou subterrâneo. O trimestre da nota (9) é regime de
+    escalada após detecção — outra coisa.
+
+    Este teste é a cicatriz: se alguém voltar a pôr 3 aqui, precisa passar por ele."""
+    f = fontes.MS_SISAGUA_AGROTOXICOS
+    assert f.periodicidade_meses == 6
+    assert f.regua_verificada
+    assert "Anexo 13" in f.regua_fonte
+    assert "2.472" in f.regua_fonte, "a tabela em vigor não é a da 888/2021"
+
+
+def test_o_catalogo_registra_que_trimestre_significa_deteccao():
+    """A inversão de leitura que a nota (9) impõe. Sem isso registrado, alguém
+    lerá 'mede trimestralmente' como bom desempenho, quando é o oposto."""
+    o = fontes.MS_SISAGUA_AGROTOXICOS.observacao
+    assert "detectado" in o and "escalada" in o.lower()
+    assert "art. 44" in o.lower(), "quem mede é o responsável pelo SAA, não o MS"
 
 
 def test_formato_legivel_e_coerente():

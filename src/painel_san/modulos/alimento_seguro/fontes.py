@@ -199,22 +199,40 @@ MS_SISAGUA_AGROTOXICOS = Fonte(
     url="https://dados.gov.br/dados/busca?termo=sisagua",
     formato=Formato.CSV,
     endpoint_estavel=False,
-    periodicidade_meses=3,
-    regua_fonte=("Portaria GM/MS nº 888/2021 — frequência trimestral para o parâmetro "
-                 "agrotóxicos. ATENÇÃO: a portaria condiciona a frequência ao "
-                 "parâmetro, ao tipo de manancial e ao resultado anterior; não é "
-                 "'trimestral para tudo'. Enquanto o artigo não for lido no primário, "
-                 "o trimestre aqui é a leitura mais exigente possível da norma, e "
-                 "não deve sustentar afirmação pública sozinho."),
-    regua_verificada=False,   # a periodicidade consta em reportagem; falta ler a portaria
-    tolerancia_dias=30,
-    regua_tolerancia=("Escolha nossa. Um mês sobre um trimestre. Pela régua "
-                      "percentual antiga eram catorze dias — dura demais para um "
-                      "sistema de digitação municipal descentralizada."),
-    granularidade=("municipio", "parametro", "trimestre"),
-    observacao=("O registro do parâmetro agrotóxico parou em janeiro de 2023, por "
-                "falha técnica do sistema. É a régua mais dura do catálogo, e a "
-                "fonte mais atrasada em relação a ela."),
+    periodicidade_meses=6,
+    regua_fonte=("Anexo 13 do Anexo XX da Portaria de Consolidação nº 5/2017, linha "
+                 "'Demais parâmetros', nota (8): agrotóxicos são monitorados na saída "
+                 "do tratamento com 1 amostra SEMESTRAL, em manancial superficial ou "
+                 "subterrâneo. Redação vigente dada pela Portaria GM/MS nº 2.472, de "
+                 "28/09/2021 — que alterou a tabela introduzida pela 888/2021. "
+                 "Art. 42 exige, em paralelo, uma amostra semestral da água bruta em "
+                 "cada ponto de captação, incluindo os parâmetros de agrotóxicos."),
+    regua_verificada=True,    # lido no Anexo XX, tabela do Anexo 13 e notas (8) e (9)
+    tolerancia_dias=60,
+    regua_tolerancia=("Escolha nossa. Dois meses sobre um ciclo de seis, a mesma do "
+                      "IBAMA por ter a mesma periodicidade — e aqui a coleta é "
+                      "municipal e descentralizada, com digitação posterior no "
+                      "sistema nacional."),
+    granularidade=("municipio", "parametro", "semestre"),
+    observacao=(
+        "CORREÇÃO DE 14/09/2026. O catálogo dizia 'trimestral obrigatório, Portaria "
+        "888/2021', vindo de reportagem. A leitura do primário desmentiu em três "
+        "pontos: a frequência de base é SEMESTRAL, não trimestral; o trimestre é "
+        "regime de ESCALADA, não regra geral; e a tabela em vigor foi dada pela "
+        "Portaria 2.472/2021, não pela 888.\n\n"
+        "A nota (9) do Anexo 13 diz: 'Quando o parâmetro for detectado na saída do "
+        "tratamento, deve-se monitorar com frequência trimestral na saída do "
+        "tratamento e no sistema de distribuição.'\n\n"
+        "Isso inverte a leitura do dado, e é o achado mais útil desta fonte: um "
+        "sistema que aparece medindo trimestralmente é um sistema onde agrotóxico "
+        "FOI detectado. A frequência, aqui, é ela própria um indicador — e ler "
+        "trimestre como 'bom aluno' seria ler ao contrário.\n\n"
+        "Quem mede também não é o Ministério: o art. 44 põe a obrigação nos "
+        "responsáveis por SAA e SAC, que submetem plano de amostragem anual à "
+        "autoridade municipal de saúde. O Ministério opera o registro. Cobrar do "
+        "órgão errado é o tipo de erro que desqualifica o instrumento inteiro.\n\n"
+        "O registro do parâmetro agrotóxico parou em janeiro de 2023, por falha "
+        "técnica do sistema."),
 )
 
 MAPA_PNCRC = Fonte(
