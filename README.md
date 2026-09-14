@@ -1,7 +1,18 @@
 # painel-san
 
-Painel de insegurança alimentar e nutricional no Brasil, construído sobre as
-pesquisas domiciliares do IBGE.
+Indicadores de segurança alimentar e nutricional no Brasil — e uma medida de quanto
+os dados públicos permitem, de fato, acompanhá-los.
+
+O pacote faz duas coisas que costumam andar separadas:
+
+- **mede o indicador**, a partir das pesquisas domiciliares do IBGE;
+- **mede a condição do dado** que sustenta o indicador: se está atual segundo o
+  calendário que o próprio órgão publicou, se é legível por máquina, se alcançou a
+  cobertura amostral que o órgão declarou, e em que eixos ele desagrega.
+
+A segunda é a menos comum, e é o que distingue este repositório de um painel de
+dados: ele foi construído para que a **ausência** de dado seja mensurável, datada e
+verificável contra o documento primário que a promete.
 
 Produto técnico da dissertação de mestrado em Segurança Alimentar e Nutricional
 (PPGSAN/UNIRIO) de Bernardo Castanho Santos Caú.
@@ -25,12 +36,37 @@ estado? o consumo de ultraprocessados acompanha a renda? — costuma refazer ess
 trabalho do zero. Este pacote faz o reprocessamento uma vez, expõe o resultado como
 dado tabular leve, e o apresenta num painel.
 
+### E o problema de que ninguém fala
+
+Há uma pergunta anterior a essas, que os painéis costumam pular: **o dado permite
+responder?** No caso da segurança do alimento, quase sempre a resposta é "em parte",
+e o "em parte" não está escrito em lugar nenhum.
+
+O Programa de Análise de Resíduos de Agrotóxicos em Alimentos mede cada alimento uma
+vez a cada três anos, publica só em PDF, e em seis dos catorze alimentos do ciclo
+2024 ficou abaixo da meta amostral que a própria Anvisa calculou. Nada disso é
+segredo — está nos documentos oficiais. Mas está espalhado por relatórios, portarias
+e planos plurianuais, em formatos que exigem um humano para serem lidos.
+
+Este pacote transforma essas promessas em código verificável: cada fonte carrega a
+régua **e o documento de onde a régua veio**, e cada afirmação sobre atraso ou
+insuficiência é medida contra o que o próprio órgão declarou. Nunca contra um padrão
+nosso.
+
 ## Estado
 
-**v0.1.0 — em construção.** O repositório traz hoje a classificação NOVA e a
-ingestão da aquisição alimentar domiciliar, ambas testadas e independentes de
-interface. A camada de visualização e o módulo de vigilância de alimentos
-contaminados por defensivos agrícolas (PARA/ANVISA) entram nas próximas versões.
+**v0.1.0 — em construção.** Estão prontos e testados, todos independentes de
+interface:
+
+| Módulo | O que faz |
+|---|---|
+| `modulos/san/nova` | classificação NOVA das 391 categorias da POF |
+| `modulos/san/ingestao` | da tabela do SIDRA a Parquet versionado |
+| `modulos/alimento_seguro/fontes` | catálogo de cinco fontes de vigilância, com régua e procedência |
+| `modulos/alimento_seguro/latencia` | avaliação em quatro dimensões independentes |
+| `modulos/alimento_seguro/registrador` | observa as fontes mensalmente e acumula histórico |
+| `modulos/alimento_seguro/para` | extrai o relatório do PARA do PDF, validando contra os totais publicados |
+| `modulos/alimento_seguro/pagina` | o mapa de frieza |
 
 O painel publicado hoje é um HTML gerado por um fluxo anterior, que este pacote está
 substituindo.
@@ -83,6 +119,78 @@ Para reprocessar a partir da tabela bruta do SIDRA:
 python -m painel_san.modulos.san.ingestao caminho/para/tabela_2393.csv
 ```
 
+## Medindo a condição do dado
+
+Cada fonte do catálogo carrega a régua que o órgão declarou **e onde ele a declarou**:
+
+```python
+from painel_san.modulos.alimento_seguro import fontes
+
+fontes.MS_SISAGUA_AGROTOXICOS.periodicidade_meses
+# 6
+fontes.MS_SISAGUA_AGROTOXICOS.regua_fonte
+# "Anexo 13 do Anexo XX da Portaria de Consolidação nº 5/2017, linha
+#  'Demais parâmetros', nota (8)... Redação vigente dada pela Portaria
+#  GM/MS nº 2.472, de 28/09/2021..."
+fontes.MS_SISAGUA_AGROTOXICOS.regua_verificada
+# True   -> conferido no documento primário, não em fonte secundária
+```
+
+Esse campo não é cerimônia. Das cinco réguas do catálogo, **as duas que vinham de
+fonte secundária — uma reportagem e a página institucional do próprio órgão —
+estavam erradas, e as duas erravam para o mesmo lado: cobrar mais do que a norma
+exige.** O SISAGUA constava como trimestral e é semestral; o IBAMA constava como
+semestral e virou anual pelo Decreto 10.833/2021. Régua com
+`regua_verificada=False` não deve sustentar afirmação pública.
+
+A avaliação devolve quatro dimensões separadas, porque têm remédios diferentes:
+
+```python
+from datetime import date
+from painel_san.modulos.alimento_seguro import latencia, para
+
+avaliacoes = para.avaliar_ciclo(para.ler_csv("dados/para_2024.csv"),
+                                ciclo=2024, hoje=date.today())
+soja = [a for a in avaliacoes if a.unidade == "soja"][0]
+
+soja.temporal     # 'no prazo'
+soja.amostral     # 'abaixo da meta declarada'
+soja.cobertura_da_meta   # 0.368  -> 85 de 231 amostras
+soja.confianca    # 'moderada'
+```
+
+Repare que a soja está **no prazo e abaixo da meta ao mesmo tempo**. Colapsar isso
+numa cor só faria o painel mentir: publicar em CSV não resolve amostra pequena, e
+coletar mais amostras não resolve o PDF.
+
+### Extrair o relatório do PARA
+
+O relatório sai só em PDF. O extrator se recusa a gravar se a soma não fechar com os
+dois totais que a Anvisa publica no corpo do texto:
+
+```bash
+python -m painel_san.modulos.alimento_seguro.para relatorio_para_2024.pdf
+# VALIDAÇÃO: 3084 amostras, 20.6% insatisfatórias — bate com os dois totais publicados
+```
+
+O PDF não entra no repositório; o que se versiona é a tabela extraída em
+`dados/para_2024.csv`, pequena o bastante para ser conferida à mão contra o
+documento.
+
+### A interface
+
+```bash
+pip install -e ".[app]"
+streamlit run app.py
+```
+
+O **mapa de frieza** acende onde não há dado. A grade é o Plano Plurianual —
+36 alimentos — e as células se dividem em três leituras que nunca são somadas:
+lacuna da fonte, ausência planejada (o plano marca o alimento para um ciclo futuro)
+e **pendência nossa** (ainda não apuramos aquele ciclo). O terceiro balde existe
+porque um instrumento que mede a falta alheia precisa medir a própria com o mesmo
+rigor.
+
 ## Testes
 
 ```bash
@@ -127,18 +235,36 @@ divergiram do SIDRA por convenção de arredondamento.
 
 ## Fontes
 
-PNAD 2004/2009/2013 · POF 2002-2003/2008-2009/2017-2018 · PNAD Contínua 2023/2024
-(IBGE) · VIGISAN 2021 (Rede PENSSAN).
+**Indicadores.** PNAD 2004/2009/2013 · POF 2002-2003/2008-2009/2017-2018 ·
+PNAD Contínua 2023/2024 (IBGE) · VIGISAN 2021 (Rede PENSSAN).
+
+**Vigilância do alimento.** Cinco fontes catalogadas, com a régua de cada uma:
+
+| Fonte | Órgão | Periodicidade | Régua conferida no primário |
+|---|---|---|---|
+| Relatórios de comercialização de agrotóxicos | IBAMA | 12 meses | sim — art. 41 do Dec. 4.074/2002, red. Dec. 10.833/2021 |
+| Monografias — limites máximos de resíduo | ANVISA | sem calendário | sim — o CSV traz `DT_ATUALIZACAO` |
+| PARA | ANVISA | 36 meses | sim — Plano Plurianual 2023-2025 |
+| SISAGUA, parâmetro agrotóxicos | Ministério da Saúde | 6 meses | sim — Anexo 13 do Anexo XX |
+| PNCRC | MAPA | 12 meses | **não** — falta ler a Portaria SDA/MAPA 1.266/2025 |
+
+A última coluna é parte do dado, não metadado: uma classificação apoiada em régua
+não conferida sai com confiança mais baixa, e a interface diz isso.
 
 ## Como contribuir
 
-Ainda não há `CONTRIBUTING.md` formal — entra na v0.2.0, junto com a camada de
-visualização. Por enquanto, abra uma issue descrevendo o que encontrou.
+Ainda não há `CONTRIBUTING.md` formal — abra uma issue descrevendo o que encontrou.
 
 Relatos de classificação NOVA divergente são especialmente bem-vindos, e há uma
 forma que ajuda muito: mande o nome exato da categoria da POF, o grupo que o pacote
 atribui, o grupo que você esperava e a justificativa. Com isso o caso vira uma linha
 em `CASOS_CONHECIDOS`, e a suíte passa a proteger contra ele para sempre.
+
+Igualmente bem-vindo, e mais raro: **uma régua do catálogo que esteja errada.** Se
+você leu o ato normativo e a periodicidade, a meta amostral ou a procedência não
+batem, mande o artigo e o dispositivo. Duas das cinco já caíram assim, e as duas
+faziam o instrumento cobrar mais do que a norma exige — o erro que mais interessa
+encontrar, porque é o que o derrubaria em público.
 
 ## Licença
 

@@ -5,12 +5,13 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "painel-san"
 version = "0.1.0"
-description = "Painel de insegurança alimentar e nutricional no Brasil, a partir de PNAD, PNAD Contínua e POF"
+description = "Indicadores de segurança alimentar e nutricional no Brasil, e uma medida de quanto os dados públicos permitem acompanhá-los"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Bernardo Castanho Santos Caú" }]
-keywords = ["seguranca alimentar", "EBIA", "NOVA", "POF", "PNAD", "Brasil"]
+keywords = ["seguranca alimentar", "EBIA", "NOVA", "POF", "PNAD", "Brasil",
+            "dados abertos", "transparencia", "agrotoxicos", "PARA", "vigilancia"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
