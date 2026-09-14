@@ -155,6 +155,27 @@ def test_o_cartao_avisa_quando_a_regua_nao_foi_conferida():
     assert "não conferida" in pagina.texto_do_cartao(c)
 
 
+def test_o_rotulo_nunca_arredonda_para_cem_o_que_esta_abaixo():
+    """A uva do ciclo 2023 teve 230 das 231 amostras da meta: 99,567%, que em zero
+    casas vira "100% da meta" ao lado do estado "abaixo da meta declarada". O
+    rótulo desmentiria o estado por arredondamento, e quem lesse concluiria, com
+    razão, que um dos dois está errado."""
+    c = pagina.Celula(unidade="uva", balde=pagina.Balde.LACUNA, estado="no prazo",
+                      amostral="abaixo da meta declarada", confianca="moderada",
+                      cobertura_da_meta=230 / 231, motivo="m", regua="r",
+                      regua_verificada=True)
+    assert c.rotulo_cobertura == "99.6% da meta"
+    assert "100" not in c.rotulo_cobertura
+
+
+def test_o_rotulo_continua_inteiro_quando_nao_ha_ambiguidade():
+    c = pagina.Celula(unidade="soja", balde=pagina.Balde.LACUNA, estado="no prazo",
+                      amostral="abaixo da meta declarada", confianca="moderada",
+                      cobertura_da_meta=85 / 231, motivo="m", regua="r",
+                      regua_verificada=True)
+    assert c.rotulo_cobertura == "37% da meta"
+
+
 def test_pendencia_nossa_nao_finge_cobertura(celulas):
     for c in celulas:
         if c.balde == pagina.Balde.NOSSA:

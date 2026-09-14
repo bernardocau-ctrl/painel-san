@@ -50,6 +50,11 @@ from painel_san.modulos.alimento_seguro import latencia as lat
 # Os catorze alimentos do ciclo 2024, na ordem em que o relatório os apresenta.
 # O Plano Plurianual 2023-2025 cobre 36 no total — ver `fontes.PARA_CRONOGRAMA`.
 ALIMENTOS = {
+    # Primeiro ciclo do Plano Plurianual. Grafias exatamente como o relatório as
+    # escreve — "Batata-doce" com hífen, que o cronograma escreve sem.
+    2023: ("Arroz", "Abacaxi", "Goiaba", "Laranja", "Manga", "Uva", "Alface",
+           "Chuchu", "Pimentão", "Tomate", "Alho", "Batata-doce", "Beterraba",
+           "Cenoura"),
     2024: ("Aveia", "Milho", "Trigo", "Banana", "Laranja", "Mamão", "Maçã",
            "Pera", "Uva", "Abobrinha", "Couve", "Pepino", "Soja", "Cebola"),
 }
@@ -57,6 +62,7 @@ ALIMENTOS = {
 # Os dois números que a Anvisa publica no corpo do relatório, e contra os quais a
 # extração é conferida. São a única razão pela qual confiar no que sai daqui.
 ESPERADO = {
+    2023: {"amostras": 3294, "pct_insatisfatorio": 26.1},
     2024: {"amostras": 3084, "pct_insatisfatorio": 20.6},
 }
 
@@ -93,14 +99,20 @@ class Resultado:
 
 # ─────────────────────────── leitura (puro) ───────────────────────────
 def chave(nome: str) -> str:
-    """Forma comparável de um nome de alimento: sem acento, minúscula.
+    """Forma comparável de um nome de alimento: sem acento, sem hífen, minúscula.
 
     Existe porque o relatório escreve "Maçã" e o cronograma do Plano Plurianual
     escreve "maca". Sem isto, o alimento mais irregular do ciclo poderia não
     encontrar seu próprio cronograma e virar lacuna inexistente.
+
+    O hífen entrou ao ingerir o ciclo 2023: o relatório escreve "Batata-doce" e o
+    cronograma, "batata doce". Dois nomes do mesmo alimento, em dois documentos da
+    mesma agência. É o tipo de divergência que não dá erro — só faz um alimento
+    sumir do painel — e por isso a normalização precisa ser generosa aqui.
     """
-    sem = unicodedata.normalize("NFKD", nome.strip().lower())
-    return "".join(c for c in sem if not unicodedata.combining(c))
+    sem = unicodedata.normalize("NFKD", nome.strip().lower().replace("-", " "))
+    sem = "".join(c for c in sem if not unicodedata.combining(c))
+    return " ".join(sem.split())
 
 
 def valor(token: str) -> Optional[int]:
@@ -256,7 +268,15 @@ def observacoes(resultados: Sequence[Resultado], ciclo: int,
     de 2023.
     """
     cronograma = cat.PARA_CRONOGRAMA if cronograma is None else cronograma
-    medidos = {chave(r.alimento): r for r in resultados}
+
+    # Ordenar por ciclo antes de indexar: a laranja é medida nos três ciclos e a
+    # uva em dois, e sem isto qual medição prevalece dependeria da ordem em que os
+    # CSVs foram concatenados. O resultado ficaria certo por acidente hoje e
+    # errado amanhã, sem nada falhar — a forma de defeito que este projeto mais
+    # já pagou. A medição mais recente é a que vale.
+    medidos = {}
+    for r in sorted(resultados, key=lambda x: x.ciclo):
+        medidos[chave(r.alimento)] = r
     ingeridos = {r.ciclo for r in resultados}
     fora = []
     for alimento in sorted(cronograma):

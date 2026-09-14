@@ -213,6 +213,50 @@ def test_ciclo_ingerido_com_alimento_ausente_e_achado_de_verdade():
     assert av.tem_alerta
 
 
+def test_a_medicao_mais_recente_vence_quando_ha_dois_ciclos():
+    """A laranja é medida nos três ciclos e a uva em dois. Sem ordenar por ciclo,
+    qual medição prevalece dependeria da ordem em que os CSVs foram concatenados
+    — certo por acidente hoje, errado amanhã, sem nada falhar."""
+    res = (para.Resultado(2024, "Uva", 234, 66), para.Resultado(2023, "Uva", 230, 40))
+    obs = {o.unidade: o for o in para.observacoes(res, 2024, {"uva": (2023, 2024)})}
+    assert obs["uva"].n_amostras == 234
+    assert obs["uva"].data_referencia == date(2024, 12, 31)
+    # e a ordem inversa na entrada não pode mudar o resultado
+    obs2 = {o.unidade: o for o in para.observacoes(tuple(reversed(res)), 2024,
+                                                   {"uva": (2023, 2024)})}
+    assert obs2["uva"].n_amostras == 234
+
+
+def test_o_ciclo_2023_bate_com_os_totais_publicados():
+    """3.294 amostras e 859 insatisfatórias (26,1%), ambos no corpo do relatório."""
+    caminho = os.path.join(os.path.dirname(__file__), "..", "dados", "para_2023.csv")
+    res = para.ler_csv(caminho)
+    ok, msg = para.valida(res, 2023, faltaram=())
+    assert ok, msg
+    assert sum(r.n_amostras for r in res) == 3294
+    assert sum(r.n_insatisfatorias for r in res) == 859
+
+
+def test_a_goiaba_de_2023_e_o_caso_extremo_do_catalogo():
+    """210 de 240 amostras insatisfatórias. Está no relatório, e é o maior número
+    que este instrumento já teve de exibir — razão a mais para o painel nunca
+    chamar isso de "alimento perigoso": o dado é sobre irregularidade
+    regulatória, e 189 das 210 foram por resíduo NÃO PERMITIDO para a cultura,
+    que é questão de registro, não de concentração."""
+    res = {r.alimento: r for r in para.ler_csv(
+        os.path.join(os.path.dirname(__file__), "..", "dados", "para_2023.csv"))}
+    assert res["Goiaba"].n_insatisfatorias == 210
+    assert res["Goiaba"].pct_insatisfatorio > 87
+
+
+def test_chave_normaliza_hifen():
+    """O relatório escreve "Batata-doce" e o cronograma "batata doce". Dois nomes
+    do mesmo alimento, em dois documentos da mesma agência. Sem normalizar, o
+    alimento sumiria do painel sem erro nenhum."""
+    assert para.chave("Batata-doce") == "batata doce" == para.chave("batata doce")
+    assert para.chave("Batata-Doce") == para.chave(" batata  doce ")
+
+
 def test_morango_continua_sendo_ausencia_planejada():
     """O caso que abriu o módulo, agora com dado real ao redor."""
     avs = {a.unidade: a for a in para.avaliar_ciclo(para.ler_csv(CSV), 2024, HOJE)}

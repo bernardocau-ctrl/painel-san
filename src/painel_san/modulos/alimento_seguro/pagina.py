@@ -120,9 +120,19 @@ class Celula:
 
     @property
     def rotulo_cobertura(self) -> str:
+        """Nunca arredonda para 100% o que está abaixo de 100%.
+
+        A uva do ciclo 2023 teve 230 das 231 amostras da meta: 99,567%, que em
+        zero casas vira "100% da meta" ao lado do estado "abaixo da meta
+        declarada". O rótulo desmentiria o estado por causa do arredondamento —
+        e quem lesse concluiria, com razão, que um dos dois está errado.
+        """
         if self.cobertura_da_meta is None:
             return "—"
-        return "%.0f%% da meta" % (100 * self.cobertura_da_meta)
+        pct = 100 * self.cobertura_da_meta
+        if pct < 100 and round(pct) >= 100:
+            return "%.1f%% da meta" % pct
+        return "%.0f%% da meta" % pct
 
 
 @dataclass(frozen=True)
@@ -305,23 +315,35 @@ def figura(celulas: Sequence[Celula], titulo: str = "Mapa de frieza — PARA"):
 
 
 # ─────────────────────────── aplicação ───────────────────────────
-def app(caminho_csv: str = "dados/para_2024.csv", ciclo: int = 2024,
+def app(padrao_csv: str = "dados/para_*.csv", ciclo: int = 2024,
         hoje: Optional[date] = None) -> None:
-    """Página Streamlit. Importada tarde, para o resto do módulo não depender dela."""
+    """Página Streamlit. Importada tarde, para o resto do módulo não depender dela.
+
+    Carrega TODOS os ciclos curados, não um. Cada ciclo ingerido converte células
+    de "pendência nossa" em avaliação de verdade — e deixar de fora um ciclo que
+    já está no disco seria exibir como dívida um trabalho já feito.
+    """
+    import glob
+
     import streamlit as st
 
     from painel_san.modulos.alimento_seguro import para
 
     hoje = hoje or date.today()
-    avaliacoes = para.avaliar_ciclo(para.ler_csv(caminho_csv), ciclo, hoje)
+    resultados = tuple(r for caminho in sorted(glob.glob(padrao_csv))
+                       for r in para.ler_csv(caminho))
+    avaliacoes = para.avaliar_ciclo(resultados, ciclo, hoje)
     celulas = montar(avaliacoes)
     r = resumo(celulas, hoje)
 
+    ciclos = sorted({x.ciclo for x in resultados})
     st.title("Onde o dado não permite vigiar")
     st.caption(
         "Este painel não diz se o alimento está seguro. Diz se o dado público "
-        "permite saber — e, quando não permite, por quê. Última verificação "
-        "automatizada: %s." % r.verificado_em.isoformat())
+        "permite saber — e, quando não permite, por quê. "
+        "Ciclos do Plano Plurianual já apurados: %s. "
+        "Última verificação automatizada: %s."
+        % (", ".join(str(c) for c in ciclos), r.verificado_em.isoformat()))
 
     colunas = st.columns(len(Balde.ORDEM))
     for coluna, balde in zip(colunas, Balde.ORDEM):
